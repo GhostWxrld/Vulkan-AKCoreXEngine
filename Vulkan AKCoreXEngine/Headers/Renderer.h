@@ -1,14 +1,18 @@
 #pragma once
 
+#define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
+#define GLFW_EXPOSE_NATIVE_WIN32
+
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
 #include <optional>
-
+#include <set>
 
 class Renderer {
 public:
@@ -21,7 +25,9 @@ private:
 	void Cleanup();
 	void CreateInstance();
 	void SetupDebugMessenger();
+	void CreateSurface();
 	void PickPhysicalDevice();
+	void CreateLogicalDevice();
 
 	GLFWwindow* window;
 	const uint32_t WIDTH = 1920;
@@ -30,13 +36,19 @@ private:
 	VkInstance instance;
 
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VkDevice logicalDevice;
+
+	VkQueue graphicsQueue;
+	VkQueue presentQueue;
+	VkSurfaceKHR surface;
 
 	//Structs
 	struct QueueFamilyIndices {
 		std::optional<uint32_t>graphicsFamily;
+		std::optional<uint32_t>presentationFamily;
 
 		bool IsComplete() {
-			return graphicsFamily.has_value();
+			return graphicsFamily.has_value() && presentationFamily.has_value();
 		}
 	};
 

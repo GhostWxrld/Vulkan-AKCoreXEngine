@@ -59,7 +59,9 @@ void Renderer::InitWindow(){
 void Renderer::InitVulkan(){
 	CreateInstance();
 	SetupDebugMessenger();
+	CreateSurface();
 	PickPhysicalDevice(); 
+	CreateLogicalDevice();
 }
 
 void Renderer::MainLoop(){
@@ -69,6 +71,11 @@ void Renderer::MainLoop(){
 }
 
 void Renderer::Cleanup(){
+
+
+	vkDestroySurfaceKHR(instance, surface, nullptr);
+	vkDestroyDevice(logicalDevice, nullptr);
+
 	if (enableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
 	}
@@ -139,6 +146,15 @@ void Renderer::SetupDebugMessenger() {
 	}
 }
 
+void Renderer::CreateSurface(){
+	VkResult result = glfwCreateWindowSurface(instance, window, nullptr, &surface);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to Create window Surface");
+	}else {
+		std::cout << "Window Surface Created-> " << surface << std::endl;
+	}
+}
+
 void Renderer::PickPhysicalDevice(){
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -154,7 +170,12 @@ void Renderer::PickPhysicalDevice(){
 	for (const auto& device : devices) {
 		if (IsDeviceSuitable(device)) {
 			physicalDevice = device;
-			std::cout << "Physical Device Retrieved!" << std::endl;
+
+			//Just to retrieve the name of the GPU
+			VkPhysicalDeviceProperties deviceProperties;
+			vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+
+			std::cout << "Physical Device Retrieved->" << deviceProperties.deviceName << std::endl;
 			break;
 		}
 	}
@@ -162,6 +183,53 @@ void Renderer::PickPhysicalDevice(){
 	if (physicalDevice == VK_NULL_HANDLE) {
 		throw std::runtime_error("Failed to find a suitable GPU!");
 	}
+}
+
+void Renderer::CreateLogicalDevice(){
+	QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(),
+											   indices.presentationFamily.value()};
+
+	float queuePriority = 1.0f;
+	for (uint32_t queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
+
+	//Logical Device Features
+	VkPhysicalDeviceFeatures deviceFeatures{};
+
+	//Logical Device Creation Info
+	VkDeviceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+
+	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.enabledExtensionCount = 0;
+
+	if (enableValidationLayers) {
+		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+		createInfo.ppEnabledLayerNames = validationLayers.data();
+	}else {
+		createInfo.enabledLayerCount = 0;
+	}
+
+	VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &logicalDevice);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to Create logical Device");
+	}else {
+		std::cout << "Logical Device Created-> " << logicalDevice << std::endl;
+	}
+
+	vkGetDeviceQueue(logicalDevice, indices.graphicsFamily.value(), 0, &graphicsQueue);
+	vkGetDeviceQueue(logicalDevice, indices.presentationFamily.value(), 0, &presentQueue);
 }
 
 //Checks if the device is suitable for the application
@@ -186,8 +254,16 @@ Renderer::QueueFamilyIndices Renderer::FindQueueFamilies(VkPhysicalDevice device
 
 	int i = 0;
 	for (const auto& queueFamily : queueFamilies) {
+
+		VkBool32 presentationSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentationSupport);
+
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
+		}
+
+		if (presentationSupport) {
+			indices.presentationFamily = i;
 		}
 
 		if (indices.IsComplete()) {

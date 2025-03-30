@@ -59,6 +59,7 @@ void Renderer::InitWindow(){
 void Renderer::InitVulkan(){
 	CreateInstance();
 	SetupDebugMessenger();
+	PickPhysicalDevice(); 
 }
 
 void Renderer::MainLoop(){
@@ -136,6 +137,66 @@ void Renderer::SetupDebugMessenger() {
 	if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to set up debug messenger!");
 	}
+}
+
+void Renderer::PickPhysicalDevice(){
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+	//Check for devices available
+	if (deviceCount == 0) {
+		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+	}
+
+	std::vector<VkPhysicalDevice>  devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+	for (const auto& device : devices) {
+		if (IsDeviceSuitable(device)) {
+			physicalDevice = device;
+			std::cout << "Physical Device Retrieved!" << std::endl;
+			break;
+		}
+	}
+
+	if (physicalDevice == VK_NULL_HANDLE) {
+		throw std::runtime_error("Failed to find a suitable GPU!");
+	}
+}
+
+//Checks if the device is suitable for the application
+//For now we will settle for any GPU but in the future will change 
+//To implement a more robust check based 
+//on the requirements of the application
+//And the highest score of the GPU
+bool Renderer::IsDeviceSuitable(VkPhysicalDevice device) {
+	QueueFamilyIndices indices = FindQueueFamilies(device);
+
+	return indices.IsComplete();
+}
+
+Renderer::QueueFamilyIndices Renderer::FindQueueFamilies(VkPhysicalDevice device){
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	int i = 0;
+	for (const auto& queueFamily : queueFamilies) {
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+		}
+
+		if (indices.IsComplete()) {
+			break;
+		}
+		i++;
+	}
+
+	return indices; 
 }
 
 void Renderer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo){

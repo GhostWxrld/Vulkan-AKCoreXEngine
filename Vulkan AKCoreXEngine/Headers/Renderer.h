@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
+#include <optional>
 
 
 class Renderer {
@@ -20,6 +21,7 @@ private:
 	void Cleanup();
 	void CreateInstance();
 	void SetupDebugMessenger();
+	void PickPhysicalDevice();
 
 	GLFWwindow* window;
 	const uint32_t WIDTH = 1920;
@@ -27,6 +29,20 @@ private:
 
 	VkInstance instance;
 
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
+	//Structs
+	struct QueueFamilyIndices {
+		std::optional<uint32_t>graphicsFamily;
+
+		bool IsComplete() {
+			return graphicsFamily.has_value();
+		}
+	};
+
+	//Helper Functions
+	bool IsDeviceSuitable(VkPhysicalDevice device);
+	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

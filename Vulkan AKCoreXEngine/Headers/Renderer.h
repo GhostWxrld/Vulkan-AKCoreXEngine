@@ -3,6 +3,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
+#define NOMINMAX
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
@@ -10,9 +11,14 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
+#include <cstdint>
 #include <vector>
 #include <optional>
 #include <set>
+#include <limits>
+#include <algorithm>
+
+typedef uint32_t u32;
 
 class Renderer {
 public:
@@ -28,10 +34,11 @@ private:
 	void CreateSurface();
 	void PickPhysicalDevice();
 	void CreateLogicalDevice();
+	void CreateSwapChain();
 
 	GLFWwindow* window;
-	const uint32_t WIDTH = 1920;
-	const uint32_t HEIGHT = 1080;
+	const u32 WIDTH = 1920;
+	const u32 HEIGHT = 1080;
 
 	VkInstance instance;
 
@@ -52,9 +59,31 @@ private:
 		}
 	};
 
+	struct SwapChainSupportDetails {
+		VkSurfaceCapabilitiesKHR capabilities;
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR> presentModes;
+	};
+
+	//Swap Chain setup
+	VkSwapchainKHR swapChain;
+	std::vector<VkImage> swapChainImages;
+	VkFormat swapChainImageFormat;
+	VkExtent2D swapChainExtent;
+
+	const std::vector<const char*> deviceExtensions = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	};
+
+	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
 	//Helper Functions
 	bool IsDeviceSuitable(VkPhysicalDevice device);
+	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  
@@ -73,6 +102,7 @@ private:
 	const std::vector<const char*> validationLayers = {
 		"VK_LAYER_KHRONOS_validation"
 	};
+	
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;

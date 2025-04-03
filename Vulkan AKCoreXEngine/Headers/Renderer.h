@@ -17,6 +17,7 @@
 #include <set>
 #include <limits>
 #include <algorithm>
+#include <fstream>
 
 typedef uint32_t u32;
 
@@ -35,6 +36,8 @@ private:
 	void PickPhysicalDevice();
 	void CreateLogicalDevice();
 	void CreateSwapChain();
+	void CreateImageViews();
+	void CreateGraphicsPipeline();
 
 	GLFWwindow* window;
 	const u32 WIDTH = 1920;
@@ -48,6 +51,9 @@ private:
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 	VkSurfaceKHR surface;
+
+	//Image View
+	std::vector<VkImageView> swapChainImageViews;
 
 	//Structs
 	struct QueueFamilyIndices {
@@ -84,6 +90,8 @@ private:
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
+	static std::vector<char> ReadFile(const std::string& fileName);
+	VkShaderModule CreateShaderModule(const std::vector<char>& code, const std::string& shaderName);
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

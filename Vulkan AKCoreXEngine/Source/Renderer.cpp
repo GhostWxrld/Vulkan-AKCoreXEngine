@@ -63,6 +63,8 @@ void Renderer::InitVulkan(){
 	PickPhysicalDevice(); 
 	CreateLogicalDevice();
 	CreateSwapChain();
+	CreateImageViews();
+	CreateGraphicsPipeline();
 }
 
 void Renderer::MainLoop(){
@@ -73,6 +75,9 @@ void Renderer::MainLoop(){
 
 void Renderer::Cleanup(){
 
+	for (auto imageView : swapChainImageViews) {
+		vkDestroyImageView(logicalDevice, imageView, nullptr);
+	}
 	vkDestroySwapchainKHR(logicalDevice, swapChain, nullptr);
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyDevice(logicalDevice, nullptr);
@@ -152,7 +157,7 @@ void Renderer::CreateSurface(){
 	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to Create window Surface");
 	}else {
-		std::cout << "Window Surface Created-> " << logicalDevice << std::endl;
+		std::cout << "Window Surface Created-> " << surface << std::endl;
 	}
 }
 
@@ -292,6 +297,60 @@ void Renderer::CreateSwapChain(){
 	//Store the Format and Extent for later use
 	swapChainImageFormat = surfaceFormat.format;
 	swapChainExtent = extent;
+}
+
+void Renderer::CreateImageViews(){
+	swapChainImageViews.resize(swapChainImages.size());
+
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		VkImageViewCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image = swapChainImages[i];
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.format = swapChainImageFormat;
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.baseMipLevel = 0;
+		createInfo.subresourceRange.levelCount = 1;
+		createInfo.subresourceRange.baseArrayLayer = 0;
+		createInfo.subresourceRange.layerCount = 1;
+
+		VkResult result = vkCreateImageView(logicalDevice, &createInfo, nullptr, &swapChainImageViews[i]);
+		if (result != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create Image Views");
+		}
+	}
+	std::cout << "Image Views Created!" << std::endl;
+}
+
+void Renderer::CreateGraphicsPipeline(){
+	auto vertexShaderCode = ReadFile("E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Shaders/VertexShader.spv");
+	auto fragmentShaderCode = ReadFile("E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Shaders/FragmentShader.spv");
+
+	VkShaderModule vertShaderModule = CreateShaderModule(vertexShaderCode, "Vertex");
+	VkShaderModule fragShaderModule = CreateShaderModule(fragmentShaderCode, "Fragment");
+
+	vkDestroyShaderModule(logicalDevice, fragShaderModule, nullptr);
+	vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
+
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = vertShaderModule;
+	vertShaderStageInfo.pName = "main";
+	vertShaderStageInfo.pSpecializationInfo = nullptr;
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = fragShaderModule;
+	fragShaderStageInfo.pName = "main";
+	fragShaderStageInfo.pSpecializationInfo = nullptr;
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 }
 
 VkSurfaceFormatKHR Renderer::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats){
@@ -434,6 +493,42 @@ Renderer::SwapChainSupportDetails Renderer::QuerySwapChainSupport(VkPhysicalDevi
 	}
 
 	return details;
+}
+
+std::vector<char> Renderer::ReadFile(const std::string& fileName){
+	
+	std::ifstream file(fileName, std::ios::ate | std::ios::binary);
+
+	if (!file.is_open()) {
+		throw std::runtime_error("Failed to open file!");
+	}
+
+	size_t fileSize = (size_t)file.tellg();
+	std::vector<char> buffer(fileSize);
+
+	file.seekg(0);
+	file.read(buffer.data(), fileSize);
+	file.close();
+
+	return buffer;
+}
+
+VkShaderModule Renderer::CreateShaderModule(const std::vector<char>& code, const std::string& shaderName){
+	
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = code.size();
+	createInfo.pCode = reinterpret_cast<const u32*>(code.data());
+
+	VkShaderModule shaderModule;
+	VkResult result = vkCreateShaderModule(logicalDevice, &createInfo, nullptr, &shaderModule);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create Shader Module");
+	}else {
+		std::cout << shaderName << " Shader Module created!" << std::endl;
+	}
+
+	return shaderModule;
 }
 
 void Renderer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo){

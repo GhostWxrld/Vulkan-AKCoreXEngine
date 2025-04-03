@@ -232,7 +232,7 @@ void Renderer::CreateLogicalDevice(){
 	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to Create logical Device");
 	}else {
-		std::cout << "Logical Device Created! "<< std::endl;
+		std::cout << "Logical Device Created-> "<< logicalDevice << std::endl;
 	}
 
 	vkGetDeviceQueue(logicalDevice, indices.graphicsFamily.value(), 0, &graphicsQueue);
@@ -287,8 +287,8 @@ void Renderer::CreateSwapChain(){
 	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create Swap Chain");
 	}else {
-		std::cout << "Swap Chain Created!" << std::endl;
-	}
+		std::cout << "Swap Chain Created-> " << swapChain << std::endl;
+	} 
 
 	vkGetSwapchainImagesKHR(logicalDevice, swapChain, &imageCount, nullptr);
 	swapChainImages.resize(imageCount);
@@ -323,7 +323,7 @@ void Renderer::CreateImageViews(){
 			throw std::runtime_error("Failed to create Image Views");
 		}
 	}
-	std::cout << "Image Views Created!" << std::endl;
+	std::cout << "Image Views Created-> " << swapChainImages.size() << std::endl;
 }
 
 void Renderer::CreateGraphicsPipeline(){

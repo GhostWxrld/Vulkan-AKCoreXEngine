@@ -37,6 +37,7 @@ private:
 	void CreateLogicalDevice();
 	void CreateSwapChain();
 	void CreateImageViews();
+	void CreateRenderPass();
 	void CreateGraphicsPipeline();
 
 	GLFWwindow* window;
@@ -51,6 +52,10 @@ private:
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 	VkSurfaceKHR surface;
+
+	VkPipeline graphicsPipeline;
+	VkRenderPass renderPass;
+	VkPipelineLayout pipelineLayout;
 
 	//Image View
 	std::vector<VkImageView> swapChainImageViews;
@@ -91,7 +96,7 @@ private:
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 	static std::vector<char> ReadFile(const std::string& fileName);
-	VkShaderModule CreateShaderModule(const std::vector<char>& code, const std::string& shaderName);
+	VkShaderModule CreateShaderModule(const std::vector<char>& code, const std::string& name);
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

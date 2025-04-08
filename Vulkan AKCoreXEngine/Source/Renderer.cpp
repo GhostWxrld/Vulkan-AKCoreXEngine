@@ -66,15 +66,26 @@ void Renderer::InitVulkan(){
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+	CreateFramebuffers();
+	CreateCommandPool();
+	CreateCommandBuffer();
+	CreateSyncObjects();
 }
 
 void Renderer::MainLoop(){
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+		DrawFrame();
 	}
 }
 
 void Renderer::Cleanup(){
+
+	vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
+
+	for (auto framebuffer : swapChainFramebuffers) {
+		vkDestroyFramebuffer(logicalDevice, framebuffer, nullptr);
+	}
 	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
 	vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
@@ -417,8 +428,8 @@ void Renderer::CreateGraphicsPipeline(){
 	VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = (float)swapChainExtent.width;
-	viewport.height = (float)swapChainExtent.height;
+	viewport.width = static_cast<float>(swapChainExtent.width);
+	viewport.height = static_cast<float>(swapChainExtent.height);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
@@ -430,7 +441,9 @@ void Renderer::CreateGraphicsPipeline(){
 	VkPipelineViewportStateCreateInfo viewportState{};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportState.viewportCount = 1;
+	viewportState.pViewports = nullptr;
 	viewportState.scissorCount = 1;
+	viewportState.pScissors = nullptr;
 
 	//Rasterizer
 	VkPipelineRasterizationStateCreateInfo rasterizer{};
@@ -528,6 +541,78 @@ void Renderer::CreateGraphicsPipeline(){
 	vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
 }
 
+void Renderer::CreateFramebuffers(){
+	swapChainFramebuffers.resize(swapChainImageViews.size());
+
+	for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+		VkImageView attachments[] = {
+			swapChainImageViews[1]
+		};
+
+		VkFramebufferCreateInfo framebufferInfo{};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderPass;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.width = swapChainExtent.width;
+		framebufferInfo.height = swapChainExtent.height;
+		framebufferInfo.layers = 1;
+
+		VkResult result = vkCreateFramebuffer(logicalDevice, &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
+		if (result != VK_SUCCESS){
+			throw std::runtime_error("Failed to create Framebuffer");
+		}else {
+			std::cout << "Framebuffer Created-> " << swapChainFramebuffers[i] << std::endl;
+		}
+	}
+}
+
+void Renderer::CreateCommandPool(){
+
+	VkCommandPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo.queueFamilyIndex = FindQueueFamilies(physicalDevice).graphicsFamily.value();
+
+	VkResult result = vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create Command Pool");
+	}else {
+		std::cout << "Command Pool Created-> " << commandPool << std::endl;
+	}
+}
+
+void Renderer::CreateCommandBuffer(){
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	VkResult result = vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate Command Buffer");
+	}else {
+		std::cout << "Command Buffer Created-> " << commandBuffer << std::endl;
+	}
+}
+
+void Renderer::CreateSyncObjects(){
+
+
+}
+
+void Renderer::DrawFrame(){
+
+}
+
+//  _   _      _                   _____                 _   _                 
+// | | | | ___| |_ __   ___ _ __  |  ___|   _ _ __   ___| |_(_) ___  _ __  ___ 
+// | |_| |/ _ \ | '_ \ / _ \ '__| | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+// |  _  |  __/ | |_) |  __/ |    |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
+// |_| |_|\___|_| .__/ \___|_|    |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
+//              |_|                                                            
 VkSurfaceFormatKHR Renderer::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats){
 	for (const auto& availableFormat : availableFormats) {
 		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB
@@ -560,7 +645,6 @@ VkExtent2D Renderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabiliti
 	}else {
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
-
 		VkExtent2D actualExtent = {
 			static_cast<u32>(width),
 			static_cast<u32>(height)
@@ -571,45 +655,11 @@ VkExtent2D Renderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabiliti
 		actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
 										capabilities.maxImageExtent.height);
 
+		std::cout << "Width: " << actualExtent.width << "x Height: " << actualExtent.height << std::endl;
+
 		return actualExtent;
 	}
 }
-
-//Checks if the device is suitable for the application
-//For now we will settle for any GPU but in the future will change 
-//To implement a more robust check based 
-//on the requirements of the application
-//And the highest score of the GPU
-bool Renderer::IsDeviceSuitable(VkPhysicalDevice device) {
-	QueueFamilyIndices indices = FindQueueFamilies(device);
-
-	//For Swap chain
-	bool extensionsSupported = CheckDeviceExtensionSupport(device);
-
-	bool swapChainAdequate = false;
-	if (extensionsSupported) {
-		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
-		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-	}
-
-	return indices.IsComplete() && extensionsSupported && swapChainAdequate;
-}
-
-bool Renderer::CheckDeviceExtensionSupport(VkPhysicalDevice device){
-	u32 extensionCount;
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-	for (const auto& extension : availableExtensions) {
-		requiredExtensions.erase(extension.extensionName);
-	}
-
-	return requiredExtensions.empty();
-} 
 
 Renderer::QueueFamilyIndices Renderer::FindQueueFamilies(VkPhysicalDevice device){
 	QueueFamilyIndices indices;
@@ -704,6 +754,96 @@ VkShaderModule Renderer::CreateShaderModule(const std::vector<char>& code, const
 	}
 
 	return shaderModule;
+}
+
+void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex){
+
+	//Begin Info
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = 0;
+	beginInfo.pInheritanceInfo = nullptr;
+
+	VkResult result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to begin recording command buffer");
+	}else {
+		std::cout << "Command Buffer Recording Started-> " << commandBuffer << std::endl;
+	}
+
+	//Render Pass Info
+	VkRenderPassBeginInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = renderPass;
+	renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = swapChainExtent;
+
+	VkClearValue clearColor{ {{0.0f, 0.0f, 0.0f, 1.0f}} };
+	renderPassInfo.clearValueCount = 1;
+	renderPassInfo.pClearValues = &clearColor;
+
+	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+	vkCmdEndRenderPass(commandBuffer);
+	result = vkEndCommandBuffer(commandBuffer);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to record command buffer");
+	} else{
+		std::cout << "Command Buffer Recorded-> " << commandBuffer << std::endl;
+	}
+}
+// __     __    _ _     _       _   _             
+// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  
+//  \ \ / / _` | | |/ _` |/ _` | __| |/ _ \| '_ \ 
+//   \ V / (_| | | | (_| | (_| | |_| | (_) | | | |
+//  _ \_/ \__,_|_|_|\__,_|\__,_|\__|_|\___/|_| |_|
+// | |    __ _ _   _  ___ _ __ ___                
+// | |   / _` | | | |/ _ \ '__/ __|               
+// | |__| (_| | |_| |  __/ |  \__ \               
+// |_____\__,_|\__, |\___|_|  |___/               
+//             |___/                              
+
+//Checks if the device is suitable for the application
+//For now we will settle for any GPU but in the future will change 
+//To implement a more robust check based 
+//on the requirements of the application
+//And the highest score of the GPU
+bool Renderer::IsDeviceSuitable(VkPhysicalDevice device) {
+	QueueFamilyIndices indices = FindQueueFamilies(device);
+
+	//For Swap chain
+	bool extensionsSupported = CheckDeviceExtensionSupport(device);
+
+	bool swapChainAdequate = false;
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
+		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+	}
+
+	return indices.IsComplete() && extensionsSupported && swapChainAdequate;
+}
+
+bool Renderer::CheckDeviceExtensionSupport(VkPhysicalDevice device) {
+	u32 extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+	for (const auto& extension : availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
 }
 
 void Renderer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo){

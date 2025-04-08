@@ -39,12 +39,20 @@ private:
 	void CreateImageViews();
 	void CreateRenderPass();
 	void CreateGraphicsPipeline();
+	void CreateFramebuffers();
+	void CreateCommandPool();
+	void CreateCommandBuffer();
+	void CreateSyncObjects();
+
+	//Main Loop Functions
+	void DrawFrame();
 
 	GLFWwindow* window;
 	const u32 WIDTH = 1920;
 	const u32 HEIGHT = 1080;
 
 	VkInstance instance;
+
 
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice logicalDevice;
@@ -56,6 +64,15 @@ private:
 	VkPipeline graphicsPipeline;
 	VkRenderPass renderPass;
 	VkPipelineLayout pipelineLayout;
+
+	std::vector<VkFramebuffer> swapChainFramebuffers;
+
+	//Command Buffers
+	VkCommandPool commandPool;
+	VkCommandBuffer commandBuffer;
+
+	VkViewport viewport;
+	VkRect2D scissor;
 
 	//Image View
 	std::vector<VkImageView> swapChainImageViews;
@@ -97,6 +114,8 @@ private:
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 	static std::vector<char> ReadFile(const std::string& fileName);
 	VkShaderModule CreateShaderModule(const std::vector<char>& code, const std::string& name);
+	void RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex);
+
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

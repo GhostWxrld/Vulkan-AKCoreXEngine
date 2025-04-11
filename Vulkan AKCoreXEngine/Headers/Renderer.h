@@ -21,6 +21,8 @@
 
 typedef uint32_t u32;
 
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 class Renderer {
 public:
 	void Run();
@@ -41,7 +43,7 @@ private:
 	void CreateGraphicsPipeline();
 	void CreateFramebuffers();
 	void CreateCommandPool();
-	void CreateCommandBuffer();
+	void CreateCommandBuffers();
 	void CreateSyncObjects();
 
 	//Main Loop Functions
@@ -69,10 +71,15 @@ private:
 
 	//Command Buffers
 	VkCommandPool commandPool;
-	VkCommandBuffer commandBuffer;
+	std::vector<VkCommandBuffer> commandBuffer;
 
-	VkViewport viewport;
-	VkRect2D scissor;
+	//Synchronization
+	std::vector<VkSemaphore> imageAvailableSemaphore;
+	std::vector<VkSemaphore> renderFinishedSemaphore;
+	std::vector<VkFence> inFlightFence;
+
+	u32 currentFrame = 0;
+
 
 	//Image View
 	std::vector<VkImageView> swapChainImageViews;

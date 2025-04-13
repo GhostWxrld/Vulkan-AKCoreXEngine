@@ -27,6 +27,7 @@ class Renderer {
 public:
 	void Run();
 
+	bool framebufferResized = false;
 private:
 	void InitWindow();
 	void InitVulkan();
@@ -80,7 +81,6 @@ private:
 
 	u32 currentFrame = 0;
 
-
 	//Image View
 	std::vector<VkImageView> swapChainImageViews;
 
@@ -122,6 +122,8 @@ private:
 	static std::vector<char> ReadFile(const std::string& fileName);
 	VkShaderModule CreateShaderModule(const std::vector<char>& code, const std::string& name);
 	void RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex);
+	void CleanupSwapchain();
+	void RecreateSwapchain();
 
 
 	// __     __    _ _     _       _   _             

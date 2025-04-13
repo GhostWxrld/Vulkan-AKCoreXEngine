@@ -49,11 +49,18 @@ void Renderer::Run(){
 	Cleanup();
 }
 
+static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+	auto app = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
+	app->framebufferResized = true;
+}
+
 void Renderer::InitWindow(){
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	window = glfwCreateWindow(WIDTH, HEIGHT, "AKCoreXEngine", nullptr, nullptr);
+	glfwSetWindowUserPointer(window, this);
+	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 void Renderer::InitVulkan(){
@@ -81,6 +88,11 @@ void Renderer::MainLoop(){
 }
 
 void Renderer::Cleanup(){
+	CleanupSwapchain();
+
+	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
+	vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroySemaphore(logicalDevice, imageAvailableSemaphore[i], nullptr);
@@ -90,17 +102,6 @@ void Renderer::Cleanup(){
 
 	vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
 
-	for (auto framebuffer : swapChainFramebuffers) {
-		vkDestroyFramebuffer(logicalDevice, framebuffer, nullptr);
-	}
-	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
-	vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
-
-	for (auto imageView : swapChainImageViews) {
-		vkDestroyImageView(logicalDevice, imageView, nullptr);
-	}
-	vkDestroySwapchainKHR(logicalDevice, swapChain, nullptr);
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyDevice(logicalDevice, nullptr);
 
@@ -638,10 +639,17 @@ void Renderer::DrawFrame(){
 
 	vkWaitForFences(logicalDevice, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
 
+	u32 imageIndex;
+	VkResult result = vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphore[currentFrame], VK_NULL_HANDLE, &imageIndex);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		RecreateSwapchain();
+		return;
+	}else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+		throw std::runtime_error("Failed to acquire Swap Chain Image!");
+	}
+
 	vkResetFences(logicalDevice, 1, &inFlightFence[currentFrame]);
 
-	u32 imageIndex;
-	vkAcquireNextImageKHR(logicalDevice, swapChain, UINT64_MAX, imageAvailableSemaphore[currentFrame], VK_NULL_HANDLE, &imageIndex);
 	vkResetCommandBuffer(commandBuffer[currentFrame], 0);
 	RecordCommandBuffer(commandBuffer[currentFrame], imageIndex);
 
@@ -660,7 +668,7 @@ void Renderer::DrawFrame(){
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	VkResult result = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence[currentFrame]);
+	result = vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence[currentFrame]);
 	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
@@ -677,8 +685,12 @@ void Renderer::DrawFrame(){
 	presentInfo.pResults = nullptr;
 
 	result = vkQueuePresentKHR(presentQueue, &presentInfo);
-	if (result != VK_SUCCESS) {
-		throw std::runtime_error("Failed to present swap chain image!");
+	
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+		framebufferResized = false;		//Make this check only after vkQueuePresentKHR
+		RecreateSwapchain();
+	}else if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to present Swap Chain Image!");
 	}
 
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -883,6 +895,36 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 	if (result != VK_SUCCESS) {
 		throw std::runtime_error("Failed to record command buffer");
 	}
+}
+void Renderer::CleanupSwapchain(){
+	for (auto framebuffer : swapChainFramebuffers) {
+		vkDestroyFramebuffer(logicalDevice, framebuffer, nullptr);
+	}
+
+	for (auto imageView : swapChainImageViews) {
+		vkDestroyImageView(logicalDevice, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(logicalDevice, swapChain, nullptr);
+}
+void Renderer::RecreateSwapchain(){
+
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(window, &width, &height);
+	while (width == 0 || height == 0) {
+		glfwGetFramebufferSize(window, &width, &height);
+		glfwWaitEvents();
+	}
+
+	vkDeviceWaitIdle(logicalDevice);
+
+	CleanupSwapchain();
+
+	CreateSwapChain();
+	CreateImageViews();
+	CreateFramebuffers();
+
+
 }
 // __     __    _ _     _       _   _             
 // \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

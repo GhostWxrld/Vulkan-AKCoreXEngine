@@ -18,6 +18,9 @@
 #include <limits>
 #include <algorithm>
 #include <fstream>
+#include <array>
+
+#include <glm/glm.hpp>
 
 typedef uint32_t u32;
 
@@ -44,6 +47,7 @@ private:
 	void CreateGraphicsPipeline();
 	void CreateFramebuffers();
 	void CreateCommandPool();
+	void CreateVertexBuffer();
 	void CreateCommandBuffers();
 	void CreateSyncObjects();
 
@@ -74,6 +78,10 @@ private:
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffer;
 
+	VkBuffer vertexBuffer;
+	VkMemoryRequirements memRequirements;
+	VkDeviceMemory vertexBufferMemory;
+
 	//Synchronization
 	std::vector<VkSemaphore> imageAvailableSemaphore;
 	std::vector<VkSemaphore> renderFinishedSemaphore;
@@ -93,6 +101,49 @@ private:
 			return graphicsFamily.has_value() && presentationFamily.has_value();
 		}
 	};
+
+	//Shader stuff ---------------TODO: Fix this shit from here, doesn't look good here
+	struct Vertex {
+		glm::vec2 pos;
+		glm::vec3 color;
+
+		//How the Vertex is going to be binded
+		static VkVertexInputBindingDescription GetBindingDescription() {
+			VkVertexInputBindingDescription bindingDescription{};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(Vertex);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			return bindingDescription;
+		}
+
+		//Vertex Attributes
+		static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+			//#1
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[0].offset = offsetof(Vertex, pos);
+			
+			//#2
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+			attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+			return attributeDescriptions;
+		}
+	};
+
+	const std::vector<Vertex> vertices = {
+		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	};
+	//END OF SHADER STUFF-----------------------
+
 
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
@@ -124,6 +175,7 @@ private:
 	void RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex);
 	void CleanupSwapchain();
 	void RecreateSwapchain();
+	u32 FindMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties);
 
 
 	// __     __    _ _     _       _   _             

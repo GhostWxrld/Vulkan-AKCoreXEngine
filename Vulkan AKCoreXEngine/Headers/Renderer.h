@@ -4,6 +4,7 @@
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define NOMINMAX
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
@@ -19,10 +20,13 @@
 #include <algorithm>
 #include <fstream>
 #include <array>
+#include <chrono> 
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 typedef uint32_t u32;
+//typedef uint16_t u16;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -44,10 +48,15 @@ private:
 	void CreateSwapChain();
 	void CreateImageViews();
 	void CreateRenderPass();
+	void CreateDescriptorLayout();
 	void CreateGraphicsPipeline();
 	void CreateFramebuffers();
 	void CreateCommandPool();
 	void CreateVertexBuffer();
+	void CreateIndexBuffer();
+	void CreateUniformBuffers();
+	void CreateDescriptorPool();
+	void CreateDescriptorSets();
 	void CreateCommandBuffers();
 	void CreateSyncObjects();
 
@@ -74,13 +83,28 @@ private:
 
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
+	//Descriptor Sets
+	VkDescriptorSetLayout descriptorSetLayout;
+
+	VkDescriptorPool descriptorPool;
+	std::vector<VkDescriptorSet> descriptorSets;
+
 	//Command Buffers
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffer;
 
 	VkBuffer vertexBuffer;
-	VkMemoryRequirements memRequirements;
 	VkDeviceMemory vertexBufferMemory;
+
+	VkMemoryRequirements memRequirements;
+
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
+
+	//UniformBuffers
+	std::vector<VkBuffer> uniformBuffers;
+	std::vector<VkDeviceMemory> uniformBufferMemory;
+	std::vector<void*> uniformBuffersMapped;
 
 	//Synchronization
 	std::vector<VkSemaphore> imageAvailableSemaphore;
@@ -138,9 +162,21 @@ private:
 	};
 
 	const std::vector<Vertex> vertices = {
-		{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+	};
+
+	const std::vector<u32> indices = {
+		0, 1, 2, 2, 3, 0
+	}; 
+
+
+	struct UniformBufferObject {
+		 glm::mat4 model;
+		 glm::mat4 view;
+		 glm::mat4 proj;
 	};
 	//END OF SHADER STUFF-----------------------
 
@@ -178,6 +214,7 @@ private:
 	u32 FindMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties);
 	void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	void UpdateUniformBuffer(u32 currentImage);
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

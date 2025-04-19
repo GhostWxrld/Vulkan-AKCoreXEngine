@@ -25,6 +25,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "stb_image.h"
+
 typedef uint32_t u32;
 //typedef uint16_t u16;
 
@@ -52,6 +54,7 @@ private:
 	void CreateGraphicsPipeline();
 	void CreateFramebuffers();
 	void CreateCommandPool();
+	void CreateTextureImage();
 	void CreateVertexBuffer();
 	void CreateIndexBuffer();
 	void CreateUniformBuffers();
@@ -64,8 +67,8 @@ private:
 	void DrawFrame();
 
 	GLFWwindow* window;
-	const u32 WIDTH = 1920;
-	const u32 HEIGHT = 1080;
+	const u32 WIDTH = 2560;
+	const u32 HEIGHT = 1440;
 
 	VkInstance instance;
 
@@ -115,6 +118,10 @@ private:
 
 	//Image View
 	std::vector<VkImageView> swapChainImageViews;
+
+	//Texture Setup
+	VkImage textureImage;
+	VkDeviceMemory textureImageMemory;
 
 	//Structs
 	struct QueueFamilyIndices {
@@ -200,6 +207,12 @@ private:
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+	
+	//Texture Functions
+	void CreateImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	VkCommandBuffer BeginSingleTimeCommands();
+	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	//Helper Functions
 	bool IsDeviceSuitable(VkPhysicalDevice device);
@@ -215,6 +228,7 @@ private:
 	void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void UpdateUniformBuffer(u32 currentImage);
+	void CopyBufferToImage(VkBuffer buffer, VkImage  image, u32 width, u32 height);
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

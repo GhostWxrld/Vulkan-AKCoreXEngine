@@ -32,6 +32,7 @@
 #include "stb_image.h"
 
 typedef uint32_t u32;
+typedef int32_t i32;
 //typedef uint16_t u16;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -95,6 +96,8 @@ namespace std {
 	};
 }
 
+//TODO: Make a model Importer class (Asset Manager)
+
 class Renderer {
 public:
 	void Run();
@@ -112,7 +115,7 @@ private:
 	void CreateLogicalDevice();
 	void CreateSwapChain();
 	void CreateImageViews();
-	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, u32 mipLevels);
 	void CreateRenderPass();
 	void CreateDescriptorLayout();
 	void CreateGraphicsPipeline();
@@ -224,6 +227,7 @@ private:
 	std::vector<VkImageView> swapChainImageViews;
 
 	//Texture Setup
+	u32 mipLevels;
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
 
@@ -277,10 +281,10 @@ private:
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	
 	//Texture Functions
-	void CreateImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	void CreateImage(u32 width, u32 height, u32 mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 	VkCommandBuffer BeginSingleTimeCommands();
 	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
-	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels);
 
 	//Helper Functions
 	bool IsDeviceSuitable(VkPhysicalDevice device);
@@ -300,6 +304,9 @@ private:
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat FindDepthFormat();
 	bool HasStencilComponent(VkFormat format);
+
+	//MipMap Func
+	void GenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels);
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

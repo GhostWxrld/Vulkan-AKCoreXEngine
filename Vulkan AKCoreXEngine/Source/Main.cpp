@@ -1,4 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
+
 #include "../Headers/Renderer.h"
 
 int main() {

@@ -5,9 +5,12 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define NOMINMAX
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
-
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
+
+#include <tiny_obj_loader.h>
 
 #include <iostream>
 #include <stdexcept>
@@ -21,6 +24,7 @@
 #include <fstream>
 #include <array>
 #include <chrono> 
+#include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -31,6 +35,65 @@ typedef uint32_t u32;
 //typedef uint16_t u16;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
+//Shader stuff ---------------TODO: Fix this shit from here, doesn't look good here
+struct Vertex {
+	glm::vec3 pos;
+	glm::vec3 color;
+	glm::vec2 texCoord;
+
+	bool operator==(const Vertex& other) const {
+		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+	}
+
+
+
+	//How the Vertex is going to be binded
+	static VkVertexInputBindingDescription GetBindingDescription() {
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(Vertex);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	//Vertex Attributes
+	static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+
+		//#1
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+		//#2
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+		//#3
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+
+		return attributeDescriptions;
+	}
+};
+
+namespace std {
+	template<>
+	struct hash<Vertex> {
+		size_t operator()(Vertex const& vertex) const {
+			return ((hash<glm::vec3>()(vertex.pos) ^
+				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+				(hash<glm::vec2>()(vertex.texCoord) << 1);
+		}
+	};
+}
 
 class Renderer {
 public:
@@ -59,6 +122,7 @@ private:
 	void CreateTextureImage();
 	void CreateTextureImageView();
 	void CreateTextureSampler();
+	void LoadModel();
 	void CreateVertexBuffer();
 	void CreateIndexBuffer();
 	void CreateUniformBuffers();
@@ -73,6 +137,42 @@ private:
 	GLFWwindow* window;
 	const u32 WIDTH = 2560;
 	const u32 HEIGHT = 1440;
+
+	//std::string MODEL_PATH = "C:/Users/aleja/Downloads/doom-eternal-praetor-suit/source/doomslayer_cine_set19_LOD0/doomslayer_cine_set19_LOD0.obj";
+	/*std::vector<std::string> TEXTURE_PATH = {"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_eye_occ.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_eyes.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_hair_n.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head_g.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head_s.png", 
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/male_scientist_teeth_n.png", 
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_set19_g.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19_g.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19_n.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19_s.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19_g.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19_s.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_hair.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_hair_s.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head_n.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/male_scientist_teeth.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19_g.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19_n.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19_s.png",	
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_hq_g.png",	
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_n.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_s.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_eyes_n.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/interal_ground_ao_texture_.jpeg",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_set19.png",
+											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19_n.png"
+}; */
+	std::string MODEL_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Models/viking_room.obj";
+	const std::string TEXTURE_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Textures/viking_room.png";
 
 	VkInstance instance;
 
@@ -144,64 +244,8 @@ private:
 		}
 	};
 
-	//Shader stuff ---------------TODO: Fix this shit from here, doesn't look good here
-	struct Vertex {
-		glm::vec3 pos;
-		glm::vec3 color;
-		glm::vec2 texCoord;
-
-		//How the Vertex is going to be binded
-		static VkVertexInputBindingDescription GetBindingDescription() {
-			VkVertexInputBindingDescription bindingDescription{};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(Vertex);
-			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			return bindingDescription;
-		}
-
-		//Vertex Attributes
-		static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions() {
-			std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-			//#1
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-			//#2
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-			//#3
-			attributeDescriptions[2].binding = 0;
-			attributeDescriptions[2].location = 2;
-			attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-			attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-			return attributeDescriptions;
-		}
-	};
-
-	const std::vector<Vertex> vertices = {
-		{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, { 0.0f, 1.0f}},
-		{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-		{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, { 0.0f, 1.0f}},
-		{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-	};
-
-	const std::vector<u32> indices = {
-		0, 1, 2, 2, 3, 0,
-		4, 5, 6, 6, 7, 4
-	}; 
+	std::vector<Vertex> vertices;
+	std::vector<u32>indices;
 
 
 	struct UniformBufferObject {

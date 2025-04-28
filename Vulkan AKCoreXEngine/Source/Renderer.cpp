@@ -86,6 +86,7 @@ void Renderer::InitVulkan(){
 	CreateTextureImageView();
 	CreateTextureSampler();
 
+	LoadModel();
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateUniformBuffers();
@@ -718,13 +719,13 @@ void Renderer::CreateDepthResources(){
 void Renderer::CreateTextureImage(){
 	int texWidth, texHeight, texChannels;
 	const char* texturePath = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Textures/LadyImage.jpg";
-	stbi_uc* pixels = stbi_load(texturePath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 	if (!pixels) {
 		throw std::runtime_error("Failed to load texture Image!");
 	}else {
-		std::cout << "Texture image loaded -> " << texturePath << std::endl;
+		std::cout << "Texture image loaded -> " << TEXTURE_PATH << std::endl;
 	}
 	
 	//Temporary buffer
@@ -798,6 +799,47 @@ void Renderer::CreateTextureSampler(){
 	}
 	else {
 		std::cout << "Texture Sampler Created-> " << textureSampler << std::endl;
+	}
+}
+
+void Renderer::LoadModel(){
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+		throw std::runtime_error(warn + err);
+	}
+
+	
+	std::unordered_map<Vertex, u32> uniqueVertices{}; 
+
+	for (const auto& shape : shapes) {
+		for (const auto& index : shape.mesh.indices) {
+			Vertex vertex{};
+
+			vertex.pos = {
+				attrib.vertices[3 * index.vertex_index + 0] ,
+				attrib.vertices[3 * index.vertex_index + 1] ,
+				attrib.vertices[3 * index.vertex_index + 2] 
+			};
+
+			vertex.texCoord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+
+			vertex.color = { 1.0f, 1.0f, 1.0f };
+
+			if (uniqueVertices.count(vertex) == 0) {
+				uniqueVertices[vertex] = static_cast<u32>(vertices.size());
+				vertices.push_back(vertex);
+
+			}
+
+			indices.push_back(uniqueVertices[vertex]);
+		}
 	}
 }
 
@@ -1527,7 +1569,7 @@ void Renderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayo
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 		if (HasStencilComponent(format)) {
-			barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+			barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
 	}else {
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

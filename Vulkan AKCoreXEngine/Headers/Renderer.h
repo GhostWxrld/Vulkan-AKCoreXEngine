@@ -121,6 +121,7 @@ private:
 	void CreateGraphicsPipeline();
 	void CreateFramebuffers();
 	void CreateCommandPool();
+	void CreateColorResources();
 	void CreateDepthResources();
 	void CreateTextureImage();
 	void CreateTextureImageView();
@@ -281,7 +282,7 @@ private:
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	
 	//Texture Functions
-	void CreateImage(u32 width, u32 height, u32 mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	void CreateImage(u32 width, u32 height, u32 mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 	VkCommandBuffer BeginSingleTimeCommands();
 	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels);
@@ -307,6 +308,15 @@ private:
 
 	//MipMap Func
 	void GenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels);
+
+	//MSAA
+	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+	VkSampleCountFlagBits GetMaxUsableSampleCount();
+
+	VkImage colorImage;
+	VkDeviceMemory colorImageMemory;
+	VkImageView colorImageView;
+
 
 	// __     __    _ _     _       _   _             
 	// \ \   / /_ _| (_) __| | __ _| |_(_) ___  _ __  

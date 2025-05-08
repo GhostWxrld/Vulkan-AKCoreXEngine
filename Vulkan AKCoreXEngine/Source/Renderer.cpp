@@ -100,9 +100,32 @@ void Renderer::InitVulkan(){
 }
 
 void Renderer::MainLoop(){
+	double lastTime = glfwGetTime();
+	double lastX = 0, lastY = 0;
+	glfwGetCursorPos(window, &lastX, &lastY);
+
+
 	while (!glfwWindowShouldClose(window)) {
-		glfwPollEvents();
+		double currentTime = glfwGetTime();
+		float deltaTime = static_cast<float>(currentTime - lastTime);
+		lastTime = currentTime;
+
+		//Handle mouse Movement
+		double xPos, yPos;
+		glfwGetCursorPos(window, &xPos, &yPos);
+		float xOffset = xPos - lastX;
+		float yOffset = lastY - yPos;
+		lastX = xPos;
+		lastY = yPos;
+
+		mainCamera.ProcessMouseMovements(xOffset, yOffset);
+		mainCamera.ProcessCommands(window, deltaTime);
+		mainCamera.Update(deltaTime);
+
 		DrawFrame();
+		UpdateFPSCounter(window);
+		glfwPollEvents();
+
 	}
 	vkDeviceWaitIdle(logicalDevice);
 }
@@ -1441,14 +1464,13 @@ void Renderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
 }
 void Renderer::UpdateUniformBuffer(u32 currentImage){
 	static auto startTime = std::chrono::high_resolution_clock::now();
-
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 	UniformBufferObject ubo{};
 	ubo.model = glm::mat4(1.0f);
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+	ubo.view = mainCamera.GetViewMatrix();
+	ubo.proj = glm::perspective(glm::radians(45.f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
 	ubo.proj[1][1] *= -1;// Invert Y axis
 
 	memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
@@ -1499,6 +1521,22 @@ VkFormat Renderer::FindDepthFormat(){
 bool Renderer::HasStencilComponent(VkFormat format){
 	
 	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+void Renderer::UpdateFPSCounter(GLFWwindow* window){
+	double currentTime = glfwGetTime();
+	double elapsedTime = currentTime - previousTime;
+	frameCount++;
+
+	if (elapsedTime >= 1.0) {
+		double fps = frameCount / elapsedTime;
+		std::stringstream ss;
+		ss << "Running at " << static_cast<int>(fps) << " fps";
+		glfwSetWindowTitle(window, ss.str().c_str());
+
+		frameCount = 0;
+		previousTime = currentTime;
+	}
 }
 
 void Renderer::GenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels){

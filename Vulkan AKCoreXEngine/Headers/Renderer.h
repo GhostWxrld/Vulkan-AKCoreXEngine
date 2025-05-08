@@ -25,11 +25,16 @@
 #include <array>
 #include <chrono> 
 #include <unordered_map>
+#include <sstream>
+
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "stb_image.h"
+
+#include "Camera.h"
+
 
 typedef uint32_t u32;
 typedef int32_t i32;
@@ -100,9 +105,14 @@ namespace std {
 
 class Renderer {
 public:
+
+	Camera mainCamera;
+
 	void Run();
 
 	bool framebufferResized = false;
+	int frameCount = 0;
+	double previousTime = glfwGetTime();
 private:
 	void InitWindow();
 	void InitVulkan();
@@ -305,6 +315,7 @@ private:
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat FindDepthFormat();
 	bool HasStencilComponent(VkFormat format);
+	void UpdateFPSCounter(GLFWwindow* window);			//FPS counter on top left
 
 	//MipMap Func
 	void GenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels);

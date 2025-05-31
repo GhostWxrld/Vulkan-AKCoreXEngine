@@ -9,7 +9,7 @@ A lightweight Vulkan rendering engine built from scratch for real-time graphics 
 - 📦 OBJ model loading
 - 🔍 Basic minimap/mipmapping system
 - 🖼️ MSAA (4x) for improved visual quality
-- 🎥 Camera system (in progress)
+- 🎥 Camera system
 - 💡 Basic lighting system (in progress)
 
 ## 🛠️ Build Requirements

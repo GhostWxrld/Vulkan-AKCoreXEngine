@@ -55,19 +55,33 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 }
 
 void Renderer::InitWindow(){
+
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	window = glfwCreateWindow(WIDTH, HEIGHT, "AKCoreXEngine", nullptr, nullptr);
 	glfwSetWindowUserPointer(window, this);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+
+	//IMAGE ICON FOR WINDOW AND GAME ICON
+	//TODO: HAVE IT DISABLED WHEN USER ENTERS FULLSCREEN MODE
+	GLFWimage icon;
+	icon.pixels = stbi_load("E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Textures/CoreXIcon.png", &icon.width, &icon.height, 0, 4);
+	if (icon.pixels) {
+		glfwSetWindowIcon(window, 1, &icon);
+		stbi_image_free(icon.pixels);
+	}
+	else {
+		throw std::runtime_error("Failed to load icon image!");
+	}
 }
 
-void Renderer::InitVulkan(){
+void Renderer::InitVulkan() {
 	CreateInstance();
 	SetupDebugMessenger();
 	CreateSurface();
-	PickPhysicalDevice(); 
+	PickPhysicalDevice();
 	CreateLogicalDevice();
 
 	CreateSwapChain();
@@ -92,7 +106,7 @@ void Renderer::InitVulkan(){
 	CreateIndexBuffer();
 	CreateUniformBuffers();
 
-	CreateDescriptorPool(); 
+	CreateDescriptorPool();
 	CreateDescriptorSets();
 
 	CreateCommandBuffers();
@@ -103,7 +117,6 @@ void Renderer::MainLoop(){
 	double lastTime = glfwGetTime();
 	double lastX = 0, lastY = 0;
 	glfwGetCursorPos(window, &lastX, &lastY);
-
 
 	while (!glfwWindowShouldClose(window)) {
 		double currentTime = glfwGetTime();
@@ -131,6 +144,7 @@ void Renderer::MainLoop(){
 }
 
 void Renderer::Cleanup(){
+
 	CleanupSwapchain();
 
 	vkDestroySampler(logicalDevice, textureSampler, nullptr);
@@ -142,6 +156,8 @@ void Renderer::Cleanup(){
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
 		vkFreeMemory(logicalDevice, uniformBufferMemory[i], nullptr);
+		vkDestroyBuffer(logicalDevice, lightBuffer[i], nullptr);
+		vkFreeMemory(logicalDevice, lightBufferMemory[i], nullptr);
 	}
 	vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
 
@@ -517,7 +533,15 @@ void Renderer::CreateDescriptorLayout(){
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+	//light binding
+	VkDescriptorSetLayoutBinding lightLayoutBinding{};
+	lightLayoutBinding.binding = 2;
+	lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	lightLayoutBinding.descriptorCount = 1;
+	lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	lightLayoutBinding.pImmutableSamplers = nullptr;
+
+	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, samplerLayoutBinding, lightLayoutBinding};
 	VkDescriptorSetLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.bindingCount = static_cast<u32>(bindings.size());
@@ -783,6 +807,8 @@ void Renderer::CreateTextureImage(){
 				 stagingBuffer,
 				 stagingBufferMemory);
 
+	std::cout << "Buffer Size for Texture Image -> " << imageSize << std::endl;
+
 	//Copy to buffer
 	void* data;
 	vkMapMemory(logicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
@@ -904,6 +930,9 @@ void Renderer::CreateVertexBuffer() {
 		stagingBuffer,
 		stagingBufferMemory);
 
+	std::cout << "Buffer Size for Vertex Buffer -> " << bufferSize << std::endl;
+
+
 	void* data;
 	vkMapMemory(logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
 	memcpy(data, vertices.data(), (size_t)bufferSize);
@@ -915,6 +944,9 @@ void Renderer::CreateVertexBuffer() {
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		vertexBuffer,
 		vertexBufferMemory);
+
+	std::cout << "Buffer Size for Vertex Buffer -> " << bufferSize << std::endl;
+
 
 	CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 	vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
@@ -932,6 +964,9 @@ void Renderer::CreateIndexBuffer(){
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		stagingBuffer, stagingBufferMemory);
 
+	std::cout << "Buffer Size for Index Buffer -> " << bufferSize << std::endl;
+
+
 
 	void* data;
 	vkMapMemory(logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
@@ -944,15 +979,23 @@ void Renderer::CreateIndexBuffer(){
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		indexBuffer, indexBufferMemory);
 
+	std::cout << "Buffer Size for Index Buffer -> " << bufferSize << std::endl;
+
+
 	CopyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
 	vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
 	vkFreeMemory(logicalDevice, stagingBufferMemory, nullptr);
 }
 
+
 void Renderer::CreateUniformBuffers(){
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+	VkDeviceSize lightBufferSize = sizeof(LightObject);
 
+	lightBuffer.resize(MAX_FRAMES_IN_FLIGHT);
+	lightBufferMemory.resize(MAX_FRAMES_IN_FLIGHT);
+	lightBufferMapped.resize(MAX_FRAMES_IN_FLIGHT);
 	uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 	uniformBufferMemory.resize(MAX_FRAMES_IN_FLIGHT);
 	uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
@@ -965,8 +1008,19 @@ void Renderer::CreateUniformBuffers(){
 			uniformBuffers[i],
 			uniformBufferMemory[i]);
 
+		CreateBuffer(lightBufferSize,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			lightBuffer[i],
+			lightBufferMemory[i]);
+
 		vkMapMemory(logicalDevice, uniformBufferMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+		vkMapMemory(logicalDevice, lightBufferMemory[i], 0, lightBufferSize, 0, &lightBufferMapped[i]);
 	}
+
+	std::println("Uniform Buffer Size -> {}", bufferSize);
+	std::println("Light Buffer size -> {}", lightBufferSize);
 }
 
 void Renderer::CreateDescriptorPool(){
@@ -978,13 +1032,14 @@ void Renderer::CreateDescriptorPool(){
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT);
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT);
+	poolSizes[1].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 2;
 
 	VkDescriptorPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	poolInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<u32>(MAX_FRAMES_IN_FLIGHT);
+	poolInfo.maxSets = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 2;
 
 	VkResult result = vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool);
 	if (result != VK_SUCCESS) {
@@ -1023,7 +1078,12 @@ void Renderer::CreateDescriptorSets(){
 		imageInfo.imageView = textureImageView;
 		imageInfo.sampler = textureSampler;
 
-		std::array<VkWriteDescriptorSet, 2> descriptorWrite{};
+		VkDescriptorBufferInfo lightBufferInfo{};
+		lightBufferInfo.buffer = lightBuffer[i];
+		lightBufferInfo.offset = 0;
+		lightBufferInfo.range = sizeof(LightObject);
+
+		std::array<VkWriteDescriptorSet, 3> descriptorWrite{};
 
 		descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrite[0].dstSet = descriptorSets[i];
@@ -1041,6 +1101,13 @@ void Renderer::CreateDescriptorSets(){
 		descriptorWrite[1].descriptorCount = 1;
 		descriptorWrite[1].pImageInfo = &imageInfo;
 
+		descriptorWrite[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite[2].dstSet = descriptorSets[i];
+		descriptorWrite[2].dstBinding = 2;
+		descriptorWrite[2].dstArrayElement = 0;
+		descriptorWrite[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite[2].descriptorCount = 1;
+		descriptorWrite[2].pBufferInfo = &lightBufferInfo;
 	
 
 		vkUpdateDescriptorSets(logicalDevice, static_cast<u32>(descriptorWrite.size()), descriptorWrite.data(), 0, nullptr);
@@ -1106,12 +1173,11 @@ void Renderer::DrawFrame(){
 		throw std::runtime_error("Failed to acquire Swap Chain Image!");
 	}
 
-	vkResetFences(logicalDevice, 1, &inFlightFence[currentFrame]);
+	UpdateUniformBuffer(currentFrame);
 
-	vkResetCommandBuffer(commandBuffer[currentFrame], 0);
 	RecordCommandBuffer(commandBuffer[currentFrame], imageIndex);
 
-	UpdateUniformBuffer(currentFrame);
+	vkResetFences(logicalDevice, 1, &inFlightFence[currentFrame]);
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1308,7 +1374,7 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 	//Begin Info
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = 0;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	beginInfo.pInheritanceInfo = nullptr;
 
 	VkResult result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
@@ -1357,9 +1423,24 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+		vkCmdBindDescriptorSets(commandBuffer, 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipelineLayout,
+			0,
+			1, 
+			&descriptorSets[currentFrame],
+			0, 
+			nullptr);
 		vkCmdDrawIndexed(commandBuffer, static_cast<u32>(indices.size()), 1, 0, 0, 0);
+
+		vkCmdBindDescriptorSets(commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipelineLayout,
+			0, 1,
+			&descriptorSets[currentFrame],
+			0,
+			nullptr);
+
 
 	vkCmdEndRenderPass(commandBuffer);
 	result = vkEndCommandBuffer(commandBuffer);
@@ -1469,11 +1550,19 @@ void Renderer::UpdateUniformBuffer(u32 currentImage){
 
 	UniformBufferObject ubo{};
 	ubo.model = glm::mat4(1.0f);
+	ubo.model = glm::rotate(ubo.model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	ubo.view = mainCamera.GetViewMatrix();
 	ubo.proj = glm::perspective(glm::radians(45.f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
 	ubo.proj[1][1] *= -1;// Invert Y axis
 
+	LightObject light{};
+	light.direction = glm::normalize(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	light.color = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f);
+	light.intensity = 1.0f; 
+	light.ambient = 0.1f;
+
 	memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+	memcpy(lightBufferMapped[currentImage], &light, sizeof(light));
 }
 
 void Renderer::CopyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height){

@@ -6,13 +6,14 @@
 #define NOMINMAX
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 
+#include <GLFW/glfw3.h>
+#include <glm/gtx/hash.hpp>
 #include <tiny_obj_loader.h>
 
 #include <iostream>
+#include <print>
+#include <glm/glm.hpp>
 #include <stdexcept>
 #include <cstdlib>
 #include <cstdint>
@@ -26,15 +27,14 @@
 #include <chrono> 
 #include <unordered_map>
 #include <sstream>
+#include <random>
 
 
-#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "stb_image.h"
+#include "../Source/stb_image.h"
 
 #include "Camera.h"
-
 
 typedef uint32_t u32;
 typedef int32_t i32;
@@ -47,6 +47,8 @@ struct Vertex {
 	glm::vec3 pos;
 	glm::vec3 color;
 	glm::vec2 texCoord;
+	glm::vec3 normal;
+
 
 	bool operator==(const Vertex& other) const {
 		return pos == other.pos && color == other.color && texCoord == other.texCoord;
@@ -65,8 +67,8 @@ struct Vertex {
 	}
 
 	//Vertex Attributes
-	static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+	static std::array<VkVertexInputAttributeDescription, 4> GetAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
 
 		//#1
 		attributeDescriptions[0].binding = 0;
@@ -85,6 +87,11 @@ struct Vertex {
 		attributeDescriptions[2].location = 2;
 		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
 		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+
+		attributeDescriptions[3].binding = 0;
+		attributeDescriptions[3].location = 3;
+		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[3].offset = offsetof(Vertex, normal);
 
 		return attributeDescriptions;
 	}
@@ -105,7 +112,6 @@ namespace std {
 
 class Renderer {
 public:
-
 	Camera mainCamera;
 
 	void Run();
@@ -145,6 +151,7 @@ private:
 	void CreateCommandBuffers();
 	void CreateSyncObjects();
 
+
 	//Main Loop Functions
 	void DrawFrame();
 
@@ -152,39 +159,6 @@ private:
 	const u32 WIDTH = 2560;
 	const u32 HEIGHT = 1440;
 
-	//std::string MODEL_PATH = "C:/Users/aleja/Downloads/doom-eternal-praetor-suit/source/doomslayer_cine_set19_LOD0/doomslayer_cine_set19_LOD0.obj";
-	/*std::vector<std::string> TEXTURE_PATH = {"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_eye_occ.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_eyes.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_hair_n.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head_g.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head_s.png", 
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/male_scientist_teeth_n.png", 
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_set19_g.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19_g.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19_n.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19_s.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19_g.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19_s.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_hair.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_hair_s.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_head_n.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/male_scientist_teeth.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19_g.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19_n.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19_s.png",	
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_hq_g.png",	
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_n.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_glass_set19_s.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_legs_set19.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/doomslayer_eyes_n.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/interal_ground_ao_texture_.jpeg",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_arms_set19.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_helmet_set19.png",
-											"C:/Users/aleja/Downloads/doom-eternal-praetor-suit/textures/slayer_torso_set19_n.png"
-}; */
 	std::string MODEL_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Models/viking_room.obj";
 	const std::string TEXTURE_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Textures/viking_room.png";
 
@@ -216,6 +190,11 @@ private:
 
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
+
+	//Light Buffer and Light Buffer Memory
+	std::vector<VkBuffer> lightBuffer;
+	std::vector<VkDeviceMemory> lightBufferMemory;
+	std::vector<void*> lightBufferMapped;
 
 	VkMemoryRequirements memRequirements;
 
@@ -267,6 +246,13 @@ private:
 		 glm::mat4 model;
 		 glm::mat4 view;
 		 glm::mat4 proj;
+	};
+
+	struct LightObject {
+		alignas(16) glm::vec4 direction;
+		alignas(16) glm::vec4 color;
+		alignas(4) float intensity;
+		alignas(4) float ambient;
 	};
 	//END OF SHADER STUFF-----------------------
 

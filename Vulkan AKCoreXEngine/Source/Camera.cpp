@@ -42,6 +42,7 @@ void Camera::ProcessCommands(GLFWwindow* window, float deltaTime){
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 		velocity.x += speed;
 	}
+
 }
 
 void Camera::ProcessMouseMovements(float xOffset, float yOffset){

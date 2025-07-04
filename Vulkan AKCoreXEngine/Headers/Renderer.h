@@ -11,7 +11,6 @@
 #include <glm/gtx/hash.hpp>
 #include <tiny_obj_loader.h>
 
-#include <iostream>
 #include <print>
 #include <glm/glm.hpp>
 #include <stdexcept>
@@ -35,6 +34,7 @@
 #include "../Source/stb_image.h"
 
 #include "Camera.h"
+#include "Cubemap.h"
 
 typedef uint32_t u32;
 typedef int32_t i32;
@@ -97,6 +97,27 @@ struct Vertex {
 	}
 };
 
+struct SkyboxVertex {
+	glm::vec3 pos;
+
+	static VkVertexInputBindingDescription GetBindingDescription() {
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(SkyboxVertex);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		return bindingDescription;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 1> GetAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(SkyboxVertex, pos);
+		return attributeDescriptions;
+	}
+};
+
 namespace std {
 	template<>
 	struct hash<Vertex> {
@@ -113,6 +134,7 @@ namespace std {
 class Renderer {
 public:
 	Camera mainCamera;
+	Cubemap skybox;
 
 	void Run();
 
@@ -135,11 +157,13 @@ private:
 	void CreateRenderPass();
 	void CreateDescriptorLayout();
 	void CreateGraphicsPipeline();
+	void CreateSkyboxPipeline();
 	void CreateFramebuffers();
 	void CreateCommandPool();
 	void CreateColorResources();
 	void CreateDepthResources();
 	void CreateTextureImage();
+	void CreateCubemapImages();
 	void CreateTextureImageView();
 	void CreateTextureSampler();
 	void LoadModel();
@@ -161,12 +185,22 @@ private:
 
 	std::string MODEL_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Models/viking_room.obj";
 	const std::string TEXTURE_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Textures/viking_room.png";
+	const std::vector<std::string> cubemapPaths = {
+		"E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Cubemap/Space/px.png",
+		"E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Cubemap/Space/nx.png",
+		"E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Cubemap/Space/py.png",
+		"E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Cubemap/Space/ny.png",
+		"E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Cubemap/Space/pz.png",
+		"E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Cubemap/Space/nz.png"
+	};
 
 	VkInstance instance;
 
 
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice logicalDevice;
+
+
 
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
@@ -176,10 +210,15 @@ private:
 	VkRenderPass renderPass;
 	VkPipelineLayout pipelineLayout;
 
+	//CUBEMAP Pipeline
+	VkPipeline skyboxPipeline;
+	VkPipelineLayout skyboxPipelineLayout;
+
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
 	//Descriptor Sets
 	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorSetLayout skyboxDescriptorSetLayout;
 
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
@@ -190,6 +229,9 @@ private:
 
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
+
+	VkBuffer skyboxVertexBuffer;
+	VkDeviceMemory skyboxVertexBufferMemory;
 
 	//Light Buffer and Light Buffer Memory
 	std::vector<VkBuffer> lightBuffer;
@@ -313,6 +355,9 @@ private:
 	VkImage colorImage;
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
+
+	//Cubemap
+	void CreateSkyboxResources();
 
 
 	// __     __    _ _     _       _   _             

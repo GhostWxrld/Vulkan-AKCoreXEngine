@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Cubemap.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\Main.cpp" />
@@ -158,6 +159,8 @@
   <ItemGroup>
     <None Include="Shaders\compile.bat" />
     <None Include="Shaders\FragmentShader.frag" />
+    <None Include="Shaders\Skybox.frag" />
+    <None Include="Shaders\Skybox.vert" />
     <None Include="Shaders\VertexShader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

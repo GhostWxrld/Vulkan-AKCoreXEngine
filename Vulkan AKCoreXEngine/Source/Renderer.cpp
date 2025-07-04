@@ -78,37 +78,50 @@ void Renderer::InitWindow(){
 }
 
 void Renderer::InitVulkan() {
+
+	//Core Setup
 	CreateInstance();
 	SetupDebugMessenger();
 	CreateSurface();
 	PickPhysicalDevice();
 	CreateLogicalDevice();
 
+	//swapchain and rendering infrastructure
 	CreateSwapChain();
 	CreateImageViews();
-
 	CreateRenderPass();
-	CreateDescriptorLayout();
-	CreateGraphicsPipeline();
 
+	//Resources that don't depend on anything
 	CreateCommandPool();
-
 	CreateColorResources();
 	CreateDepthResources();
 	CreateFramebuffers();
 
+	//Texture Resources 
 	CreateTextureImage();
 	CreateTextureImageView();
 	CreateTextureSampler();
 
+	//Skybox Resources
+	CreateSkyboxResources();
+	CreateCubemapImages();
+
+	//Model and Buffers
 	LoadModel();
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateUniformBuffers();
 
+	//Descriptor Setup
+	CreateDescriptorLayout();
 	CreateDescriptorPool();
 	CreateDescriptorSets();
 
+	//Pipelines
+	CreateSkyboxPipeline();
+	CreateGraphicsPipeline();
+
+	//Final Setup
 	CreateCommandBuffers();
 	CreateSyncObjects();
 }
@@ -147,6 +160,8 @@ void Renderer::Cleanup(){
 
 	CleanupSwapchain();
 
+	skybox.DestroyCubemap(logicalDevice);
+
 	vkDestroySampler(logicalDevice, textureSampler, nullptr);
 	vkDestroyImageView(logicalDevice, textureImageView, nullptr);
 
@@ -162,14 +177,20 @@ void Renderer::Cleanup(){
 	vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
 
 	vkDestroyDescriptorSetLayout(logicalDevice, descriptorSetLayout, nullptr);
+	//vkDestroyDescriptorSetLayout(logicalDevice, skyboxDescriptorSetLayout, nullptr);
 
 	//Buffer Deletion
+	vkDestroyBuffer(logicalDevice, skyboxVertexBuffer, nullptr);
+	vkFreeMemory(logicalDevice, skyboxVertexBufferMemory, nullptr);
+
 	vkDestroyBuffer(logicalDevice, indexBuffer, nullptr);
 	vkFreeMemory(logicalDevice, indexBufferMemory, nullptr);
 
 	vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
 	vkFreeMemory(logicalDevice, vertexBufferMemory, nullptr);
 	//End of Buffer Deletions
+	vkDestroyPipeline(logicalDevice, skyboxPipeline, nullptr);
+	vkDestroyPipelineLayout(logicalDevice, skyboxPipelineLayout, nullptr);
 
 	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
@@ -294,6 +315,7 @@ void Renderer::PickPhysicalDevice(){
 	if (physicalDevice == VK_NULL_HANDLE) {
 		throw std::runtime_error("Failed to find a suitable GPU!");
 	}
+
 }
 
 void Renderer::CreateLogicalDevice(){
@@ -345,6 +367,8 @@ void Renderer::CreateLogicalDevice(){
 
 	vkGetDeviceQueue(logicalDevice, indices.graphicsFamily.value(), 0, &graphicsQueue);
 	vkGetDeviceQueue(logicalDevice, indices.presentationFamily.value(), 0, &presentQueue);
+
+	skybox.Initialize(physicalDevice, logicalDevice);
 }
 
 void Renderer::CreateSwapChain(){
@@ -519,6 +543,8 @@ void Renderer::CreateRenderPass() {
 }
 
 void Renderer::CreateDescriptorLayout(){
+
+	//UBO Binding
 	VkDescriptorSetLayoutBinding uboLayoutBinding{};
 	uboLayoutBinding.binding = 0;
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -526,6 +552,7 @@ void Renderer::CreateDescriptorLayout(){
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	uboLayoutBinding.pImmutableSamplers = nullptr;
 
+	//Texture Sampler Binding
 	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
 	samplerLayoutBinding.binding = 1;
 	samplerLayoutBinding.descriptorCount = 1;
@@ -541,7 +568,15 @@ void Renderer::CreateDescriptorLayout(){
 	lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	lightLayoutBinding.pImmutableSamplers = nullptr;
 
-	std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboLayoutBinding, samplerLayoutBinding, lightLayoutBinding};
+	//Cubemap binding
+	VkDescriptorSetLayoutBinding cubemapLayoutBinding{};
+	cubemapLayoutBinding.binding = 3;
+	cubemapLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	cubemapLayoutBinding.descriptorCount = 1;
+	cubemapLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	cubemapLayoutBinding.pImmutableSamplers = nullptr;
+
+	std::array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, lightLayoutBinding, cubemapLayoutBinding};
 	VkDescriptorSetLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.bindingCount = static_cast<u32>(bindings.size());
@@ -554,6 +589,7 @@ void Renderer::CreateDescriptorLayout(){
 		std::cout << "Descriptor Set Layout Created-> " << descriptorSetLayout << std::endl;
 	}
 
+	skyboxDescriptorSetLayout = descriptorSetLayout;
 }
 
 void Renderer::CreateGraphicsPipeline(){
@@ -725,6 +761,175 @@ void Renderer::CreateGraphicsPipeline(){
 	vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
 }
 
+void Renderer::CreateSkyboxPipeline(){
+	auto vertexShaderCode = ReadFile("E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Shaders/SkyboxVert.spv");
+	auto fragmentShaderCode = ReadFile("E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Shaders/SkyboxFrag.spv");
+
+	VkShaderModule vertShaderModule = CreateShaderModule(vertexShaderCode, "Vertex");
+	VkShaderModule fragShaderModule = CreateShaderModule(fragmentShaderCode, "Fragment");
+
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = vertShaderModule;
+	vertShaderStageInfo.pName = "main";
+	vertShaderStageInfo.pSpecializationInfo = nullptr;
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = fragShaderModule;
+	fragShaderStageInfo.pName = "main";
+	fragShaderStageInfo.pSpecializationInfo = nullptr;
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+	//Dynamic State
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamicState{};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = static_cast<u32>(dynamicStates.size());
+	dynamicState.pDynamicStates = dynamicStates.data();
+
+	auto bindingDescription = SkyboxVertex::GetBindingDescription();
+	auto attributeDescriptions = SkyboxVertex::GetAttributeDescriptions();
+
+	//Vertex Input Creation
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<u32>(attributeDescriptions.size());
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+	//Input Assembly
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+	VkPipelineViewportStateCreateInfo viewportState{};
+	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.pViewports = nullptr;
+	viewportState.scissorCount = 1;
+	viewportState.pScissors = nullptr;
+
+	//Rasterizer
+	VkPipelineRasterizationStateCreateInfo rasterizer{};
+	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer.depthClampEnable = VK_FALSE;
+	rasterizer.rasterizerDiscardEnable = VK_FALSE;
+	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;						//Set to Line for testing later (Enable GPU features)
+	rasterizer.lineWidth = 1.0f;
+	rasterizer.cullMode = VK_CULL_MODE_NONE;
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizer.depthBiasEnable = VK_FALSE;
+	rasterizer.depthBiasConstantFactor = 0.0f;
+	rasterizer.depthBiasClamp = 0.0f;
+	rasterizer.depthBiasSlopeFactor = 0.0f;
+
+	//MultiSampling
+	VkPipelineMultisampleStateCreateInfo multisampling{};
+	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisampling.sampleShadingEnable = VK_FALSE;
+	multisampling.rasterizationSamples = msaaSamples;
+	multisampling.minSampleShading = 1.0f;
+	multisampling.pSampleMask = nullptr;
+	multisampling.alphaToCoverageEnable = VK_FALSE;
+	multisampling.alphaToOneEnable = VK_FALSE;
+
+	//Color Blending (Attachment)
+	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+		VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT |
+		VK_COLOR_COMPONENT_A_BIT;
+	colorBlendAttachment.blendEnable = VK_FALSE;
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+
+	//Color Blending (Creation)
+	VkPipelineColorBlendStateCreateInfo colorBlending{};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY;
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.blendConstants[0] = 0.0f;
+	colorBlending.blendConstants[1] = 0.0f;
+	colorBlending.blendConstants[2] = 0.0f;
+	colorBlending.blendConstants[3] = 0.0f;
+
+	//Pipeline Layout
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &skyboxDescriptorSetLayout;
+	pipelineLayoutInfo.pushConstantRangeCount = 0;
+	pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+	VkResult result = vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &skyboxPipelineLayout);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create skybox Pipeline Layout");
+	}
+	else {
+		std::cout << "skybox Pipeline Layout Created-> " << skyboxPipelineLayout << std::endl;
+	}
+
+	VkPipelineDepthStencilStateCreateInfo depthStencil{};
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencil.depthTestEnable = VK_TRUE;
+	depthStencil.depthWriteEnable = VK_FALSE;
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	depthStencil.depthBoundsTestEnable = VK_FALSE;
+	depthStencil.minDepthBounds = 0.0f;
+	depthStencil.maxDepthBounds = 1.0f;
+	depthStencil.stencilTestEnable = VK_FALSE;
+	depthStencil.front = {};
+	depthStencil.back = {};
+
+	// Pipeline Creation
+	VkGraphicsPipelineCreateInfo pipelineInfo{};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = &dynamicState;
+	pipelineInfo.layout = skyboxPipelineLayout;
+	pipelineInfo.renderPass = renderPass;
+	pipelineInfo.subpass = 0;
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+	pipelineInfo.basePipelineIndex = -1;
+	pipelineInfo.pDepthStencilState = &depthStencil;
+
+	result = vkCreateGraphicsPipelines(logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &skyboxPipeline);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create SKybox Pipeline");
+	}
+	else {
+		std::cout << "Skybox Pipeline Created-> " << skyboxPipeline << std::endl;
+	}
+
+	vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
+	vkDestroyShaderModule(logicalDevice, fragShaderModule, nullptr);
+}
+
 void Renderer::CreateFramebuffers(){
 	swapChainFramebuffers.resize(swapChainImageViews.size());
 
@@ -781,6 +986,80 @@ void Renderer::CreateDepthResources(){
 	depthImageView = CreateImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1); 
 
 	TransitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+}
+
+void Renderer::CreateCubemapImages() {
+	int cubemapWidth, cubemapHeight, cubemapChannels;
+	stbi_uc* pixels = stbi_load(cubemapPaths[0].c_str(), &cubemapWidth, &cubemapHeight, &cubemapChannels, STBI_rgb_alpha);
+	if (!pixels) {
+		throw std::runtime_error("Failed to load cubemap image: " + cubemapPaths[0]);
+	}else{
+			std::cout << "Cubemap image loaded -> " << cubemapPaths[0] << std::endl;
+	}
+	stbi_image_free(pixels);
+
+	VkDeviceSize cubemapImageSize = cubemapWidth * cubemapHeight * 4; //6 faces, each with 4 channels (RGBA)
+	mipLevels = 1; 
+
+	skybox.CreateCubemapImage(
+		cubemapWidth,
+		cubemapHeight,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		VK_FORMAT_R8G8B8A8_SRGB,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+	);
+
+	VkCommandBuffer CubemapCommandBuffer = BeginSingleTimeCommands();
+	skybox.TransitionCubemapImageLayout(CubemapCommandBuffer, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+
+	std::vector<VkBuffer> stagingBuffer(6);
+	std::vector<VkDeviceMemory> stagingBufferMemory(6);
+
+	for (u32 i = 0; i < 6; i++) {
+		int w, h, ch;
+		stbi_uc* facePixels = stbi_load(cubemapPaths[i].c_str(), &w, &h, &ch, STBI_rgb_alpha);
+		if (!facePixels) {
+			throw std::runtime_error("Failed to load cubemap image: " + cubemapPaths[i]);
+		}else {
+			std::cout << "Cubemap image loaded -> " << cubemapPaths[i] << std::endl;
+		}
+
+		if (w != cubemapWidth || h != cubemapHeight) {
+			throw std::runtime_error("Cubemap images must have the same dimensions!");
+		}
+
+		CreateBuffer(
+			cubemapImageSize,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer[i],
+			stagingBufferMemory[i]
+		);
+
+		void* data;
+		vkMapMemory(logicalDevice, stagingBufferMemory[i], 0, cubemapImageSize, 0, &data);
+		memcpy(data, facePixels, static_cast<size_t>(cubemapImageSize));
+		vkUnmapMemory(logicalDevice, stagingBufferMemory[i]);
+
+		stbi_image_free(facePixels);
+
+		skybox.CopyBufferToCubemapImage(CubemapCommandBuffer, stagingBuffer[i], cubemapWidth, cubemapHeight, i);
+	}
+
+	skybox.TransitionCubemapImageLayout(CubemapCommandBuffer, VK_FORMAT_R8G8B8A8_SRGB,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
+
+	EndSingleTimeCommands(CubemapCommandBuffer);
+
+	for (u32 i = 0; i < 6; i++) {
+		vkDestroyBuffer(logicalDevice, stagingBuffer[i], nullptr);
+		vkFreeMemory(logicalDevice, stagingBufferMemory[i], nullptr);
+	}
+
+	std::cout << "Cubemap Images Created Successfully!" << std::endl;
 }
 
 void Renderer::CreateTextureImage(){
@@ -992,7 +1271,7 @@ void Renderer::CreateIndexBuffer(){
 void Renderer::CreateUniformBuffers(){
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	VkDeviceSize lightBufferSize = sizeof(LightObject);
-
+	
 	lightBuffer.resize(MAX_FRAMES_IN_FLIGHT);
 	lightBufferMemory.resize(MAX_FRAMES_IN_FLIGHT);
 	lightBufferMapped.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1030,7 +1309,7 @@ void Renderer::CreateDescriptorPool(){
 
 	std::array<VkDescriptorPoolSize, 2> poolSizes{};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT);
+	poolSizes[0].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 2;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[1].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 2;
 
@@ -1039,6 +1318,7 @@ void Renderer::CreateDescriptorPool(){
 	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	poolInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
+
 	poolInfo.maxSets = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 2;
 
 	VkResult result = vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool);
@@ -1083,7 +1363,13 @@ void Renderer::CreateDescriptorSets(){
 		lightBufferInfo.offset = 0;
 		lightBufferInfo.range = sizeof(LightObject);
 
-		std::array<VkWriteDescriptorSet, 3> descriptorWrite{};
+		VkDescriptorImageInfo skyboxImageInfo{};
+		skyboxImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		//Todo:: ImageView and Sampler are NULL
+		skyboxImageInfo.imageView = skybox.CreateCubemapImageView(logicalDevice, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+		skyboxImageInfo.sampler = skybox.CreateCubemapSampler(physicalDevice, logicalDevice);
+
+		std::array<VkWriteDescriptorSet, 4> descriptorWrite{};
 
 		descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrite[0].dstSet = descriptorSets[i];
@@ -1108,7 +1394,15 @@ void Renderer::CreateDescriptorSets(){
 		descriptorWrite[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrite[2].descriptorCount = 1;
 		descriptorWrite[2].pBufferInfo = &lightBufferInfo;
-	
+
+		//Cubemap
+		descriptorWrite[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite[3].dstSet = descriptorSets[i];
+		descriptorWrite[3].dstBinding = 3;
+		descriptorWrite[3].dstArrayElement = 0;
+		descriptorWrite[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrite[3].descriptorCount = 1;
+		descriptorWrite[3].pImageInfo = &skyboxImageInfo;
 
 		vkUpdateDescriptorSets(logicalDevice, static_cast<u32>(descriptorWrite.size()), descriptorWrite.data(), 0, nullptr);
 	}
@@ -1399,7 +1693,6 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 
 
 	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
 		//Viewport
 		VkViewport viewport{};
@@ -1418,28 +1711,31 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 		scissor.extent = swapChainExtent;
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+		//Skybox Pipeline
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipeline);
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipelineLayout,
+			0, 1, &descriptorSets[currentFrame], 0, nullptr);
+
+		VkBuffer skyboxVertexBuffers[] = { skyboxVertexBuffer };
+		VkDeviceSize Skyboxoffsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, skyboxVertexBuffers, Skyboxoffsets); 
+		vkCmdDraw(commandBuffer, 36, 1, 0, 0);
+
+		//Graphics Pipeline
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+		vkCmdBindDescriptorSets(commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipelineLayout,
+			0,
+			1,
+			&descriptorSets[currentFrame],
+			0,
+			nullptr);
 		VkBuffer vertexBuffers[] = { vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-		vkCmdBindDescriptorSets(commandBuffer, 
-			VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pipelineLayout,
-			0,
-			1, 
-			&descriptorSets[currentFrame],
-			0, 
-			nullptr);
 		vkCmdDrawIndexed(commandBuffer, static_cast<u32>(indices.size()), 1, 0, 0, 0);
-
-		vkCmdBindDescriptorSets(commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			pipelineLayout,
-			0, 1,
-			&descriptorSets[currentFrame],
-			0,
-			nullptr);
 
 
 	vkCmdEndRenderPass(commandBuffer);
@@ -1502,6 +1798,8 @@ u32 Renderer::FindMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties){
 	throw std::runtime_error("Failed to find suitable memory type!");
 
 }
+
+
 void Renderer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory){
 
 	VkBufferCreateInfo bufferInfo{};
@@ -1565,8 +1863,8 @@ void Renderer::UpdateUniformBuffer(u32 currentImage){
 	memcpy(lightBufferMapped[currentImage], &light, sizeof(light));
 }
 
-void Renderer::CopyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height){
-	VkCommandBuffer commandBuffer= BeginSingleTimeCommands();
+void Renderer::CopyBufferToImage(VkBuffer buffer, VkImage image, u32 width, u32 height) {
+	VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
 	VkBufferImageCopy region{};
 	region.bufferOffset = 0;
@@ -1732,6 +2030,85 @@ VkSampleCountFlagBits Renderer::GetMaxUsableSampleCount(){
 
 }
 
+void Renderer::CreateSkyboxResources(){
+	const std::vector<SkyboxVertex> skyboxVertices = {
+		// Front face
+		{{-1.0f, -1.0f,  1.0f}},
+		{{ 1.0f, -1.0f,  1.0f}},
+		{{ 1.0f,  1.0f,  1.0f}},
+		{{ 1.0f,  1.0f,  1.0f}},
+		{{-1.0f,  1.0f,  1.0f}},
+		{{-1.0f, -1.0f,  1.0f}},
+
+		// Back face
+		{{-1.0f, -1.0f, -1.0f}},
+		{{-1.0f,  1.0f, -1.0f}},
+		{{ 1.0f,  1.0f, -1.0f}},
+		{{ 1.0f,  1.0f, -1.0f}},
+		{{ 1.0f, -1.0f, -1.0f}},
+		{{-1.0f, -1.0f, -1.0f}},
+
+		// Left face
+		{{-1.0f,  1.0f,  1.0f}},
+		{{-1.0f,  1.0f, -1.0f}},
+		{{-1.0f, -1.0f, -1.0f}},
+		{{-1.0f, -1.0f, -1.0f}},
+		{{-1.0f, -1.0f,  1.0f}},
+		{{-1.0f,  1.0f,  1.0f}},
+
+		// Right face
+		{{ 1.0f,  1.0f,  1.0f}},
+		{{ 1.0f, -1.0f,  1.0f}},
+		{{ 1.0f, -1.0f, -1.0f}},
+		{{ 1.0f, -1.0f, -1.0f}},
+		{{ 1.0f,  1.0f, -1.0f}},
+		{{ 1.0f,  1.0f,  1.0f}},
+
+		// Top face
+		{{-1.0f,  1.0f, -1.0f}},
+		{{-1.0f,  1.0f,  1.0f}},
+		{{ 1.0f,  1.0f,  1.0f}},
+		{{ 1.0f,  1.0f,  1.0f}},
+		{{ 1.0f,  1.0f, -1.0f}},
+		{{-1.0f,  1.0f, -1.0f}},
+
+		// Bottom face
+		{{-1.0f, -1.0f, -1.0f}},
+		{{ 1.0f, -1.0f, -1.0f}},
+		{{ 1.0f, -1.0f,  1.0f}},
+		{{ 1.0f, -1.0f,  1.0f}},
+		{{-1.0f, -1.0f,  1.0f}},
+		{{-1.0f, -1.0f, -1.0f}}
+	};
+	
+	VkDeviceSize bufferSize = sizeof(skyboxVertices[0]) * skyboxVertices.size();
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	CreateBuffer(bufferSize, 
+					VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+					stagingBuffer, 
+					stagingBufferMemory);
+
+	std::cout << "Skybox Vertex Buffer Created-> " << stagingBuffer << std::endl;
+
+	void* data;
+	vkMapMemory(logicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, skyboxVertices.data(), (size_t)bufferSize);
+	vkUnmapMemory(logicalDevice, stagingBufferMemory);
+
+	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		skyboxVertexBuffer,
+		skyboxVertexBufferMemory);
+
+	std::cout << "Skybox Vertex Buffer Created-> " << skyboxVertexBuffer << std::endl;
+
+	CopyBuffer(stagingBuffer, skyboxVertexBuffer, bufferSize);
+	vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
+	vkFreeMemory(logicalDevice, stagingBufferMemory, nullptr);
+}
+
 void Renderer::CreateColorResources(){
 	VkFormat colorFormat = swapChainImageFormat;
 
@@ -1790,6 +2167,7 @@ void Renderer::CreateImage(u32 width, u32 height, u32 mipLevels, VkSampleCountFl
 	}
 
 	vkBindImageMemory(logicalDevice, image, imageMemory, 0);
+
 }
 VkCommandBuffer Renderer::BeginSingleTimeCommands(){
 	VkCommandBufferAllocateInfo allocInfo{};
@@ -1799,7 +2177,7 @@ VkCommandBuffer Renderer::BeginSingleTimeCommands(){
 	allocInfo.commandBufferCount = 1;
 
 	VkCommandBuffer commandBuffer;
-	vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
+ 	vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
 
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

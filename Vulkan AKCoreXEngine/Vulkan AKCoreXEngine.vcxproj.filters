@@ -24,6 +24,9 @@
     <ClCompile Include="Source\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Cubemap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\Renderer.h">
@@ -39,5 +42,7 @@
     <None Include="Shaders\compile.bat">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="Shaders\Skybox.vert" />
+    <None Include="Shaders\Skybox.frag" />
   </ItemGroup>
 </Project>

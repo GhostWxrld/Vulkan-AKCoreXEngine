@@ -22,6 +22,10 @@ glm::mat4 Camera::GetRotationMatrix(){
 	return glm::toMat4(yawRotation) * glm::toMat4(pitchRotation);
 }
 
+glm::vec3 Camera::GetPosition() {
+	return position;
+}
+
 void Camera::ProcessCommands(GLFWwindow* window, float deltaTime){
 
 	velocity = glm::vec3(0.f);		//Reset velocity each frame
@@ -43,9 +47,30 @@ void Camera::ProcessCommands(GLFWwindow* window, float deltaTime){
 		velocity.x += speed;
 	}
 
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {				//Only for Debug Purposes
+		glfwTerminate();
+		glfwDestroyWindow(window);
+	}
+
+	//UI Related
+	static bool spacePressed = false;
+	bool currentSpaceState = (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS);
+	if (currentSpaceState && !spacePressed) {
+		mouseLock = !mouseLock;
+		if (mouseLock) {
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+		else {
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+	}
+	spacePressed = currentSpaceState;
 }
 
 void Camera::ProcessMouseMovements(float xOffset, float yOffset){
+
+	if (!mouseLock) return;							//Don't update unless active
+
 	xOffset *= mouseSensitivity;
 	yOffset *= mouseSensitivity;
 
@@ -59,6 +84,7 @@ void Camera::ProcessMouseMovements(float xOffset, float yOffset){
 }
 
 void Camera::Update(float deltaTime) {
+
 	glm::vec3 forward = {
 		cos (glm::radians(yaw)) * cos(glm::radians(pitch)),
 		sin (glm::radians(pitch)),

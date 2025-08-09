@@ -1,0 +1,23 @@
+------------TODO------------
+Date Started  -> 08.02.2025
+Last Modified -> 08.08.2025
+
+In This file, here is everythiung that needs to be done in the project.	
+
+Vulkan Core:
+
+
+
+Mechanics:
+-> Implement Assimp instead of ObjLoader to take in more file formats.						[]
+-> Implement a system to handle different mesh formats and materials.						[]
+
+
+Rendering:
+
+
+UI:
+-> Implement ImGui																			[X]
+-> Implement a UI system that handles dragging and dropping of files.						[]
+-> Fix the ImGui Rendering Functions in the Renderer.cpp file								[X]	
+-> Implement Checkboxes and other UI elements 												[]	

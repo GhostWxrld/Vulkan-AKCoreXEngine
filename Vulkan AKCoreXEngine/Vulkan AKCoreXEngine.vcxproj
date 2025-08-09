@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -70,13 +70,25 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(ProjectDir)\ImGui\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(ProjectDir)\ImGui\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(ProjectDir)\ImGui\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(ProjectDir)\ImGui\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -95,7 +107,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -114,7 +126,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -133,7 +145,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -147,21 +159,34 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ImGui\imgui.cpp" />
+    <ClCompile Include="ImGui\imgui_draw.cpp" />
+    <ClCompile Include="ImGui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="ImGui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="ImGui\imgui_tables.cpp" />
+    <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Source\Cubemap.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\UI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\Camera.h" />
+    <ClInclude Include="Headers\Cubemap.h" />
     <ClInclude Include="Headers\Renderer.h" />
+    <ClInclude Include="Headers\UI.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\Clouds.comp" />
     <None Include="Shaders\compile.bat" />
     <None Include="Shaders\FragmentShader.frag" />
     <None Include="Shaders\Skybox.frag" />
     <None Include="Shaders\Skybox.vert" />
     <None Include="Shaders\VertexShader.vert" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Source\TODO.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

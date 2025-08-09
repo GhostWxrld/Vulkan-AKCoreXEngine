@@ -61,7 +61,6 @@ void Renderer::InitWindow(){
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	window = glfwCreateWindow(WIDTH, HEIGHT, "AKCoreXEngine", nullptr, nullptr);
 	glfwSetWindowUserPointer(window, this);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
 	//IMAGE ICON FOR WINDOW AND GAME ICON
@@ -116,7 +115,10 @@ void Renderer::InitVulkan() {
 	CreateDescriptorLayout();
 	CreateDescriptorPool();
 	CreateDescriptorSets();
-
+	ui.CreateUIDescriptorPool(logicalDevice);
+	QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
+	ui.CreateUICommandPool(logicalDevice, indices.graphicsFamily.value());
+	
 	//Pipelines
 	CreateSkyboxPipeline();
 	CreateGraphicsPipeline();
@@ -124,6 +126,10 @@ void Renderer::InitVulkan() {
 	//Final Setup
 	CreateCommandBuffers();
 	CreateSyncObjects();
+
+	//UI
+	InitImgui();
+
 }
 
 void Renderer::MainLoop(){
@@ -159,6 +165,7 @@ void Renderer::MainLoop(){
 void Renderer::Cleanup(){
 
 	CleanupSwapchain();
+	ui.Cleanup(logicalDevice);
 
 	skybox.DestroyCubemap(logicalDevice);
 
@@ -179,7 +186,6 @@ void Renderer::Cleanup(){
 	vkDestroyDescriptorSetLayout(logicalDevice, descriptorSetLayout, nullptr);
 	//vkDestroyDescriptorSetLayout(logicalDevice, skyboxDescriptorSetLayout, nullptr);
 
-	//Buffer Deletion
 	vkDestroyBuffer(logicalDevice, skyboxVertexBuffer, nullptr);
 	vkFreeMemory(logicalDevice, skyboxVertexBufferMemory, nullptr);
 
@@ -189,9 +195,9 @@ void Renderer::Cleanup(){
 	vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
 	vkFreeMemory(logicalDevice, vertexBufferMemory, nullptr);
 	//End of Buffer Deletions
+
 	vkDestroyPipeline(logicalDevice, skyboxPipeline, nullptr);
 	vkDestroyPipelineLayout(logicalDevice, skyboxPipelineLayout, nullptr);
-
 	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
 	vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
@@ -542,7 +548,7 @@ void Renderer::CreateRenderPass() {
 	}
 }
 
-void Renderer::CreateDescriptorLayout(){
+void Renderer::CreateDescriptorLayout() {
 
 	//UBO Binding
 	VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -576,7 +582,7 @@ void Renderer::CreateDescriptorLayout(){
 	cubemapLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	cubemapLayoutBinding.pImmutableSamplers = nullptr;
 
-	std::array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, lightLayoutBinding, cubemapLayoutBinding};
+	std::array<VkDescriptorSetLayoutBinding, 4> bindings = { uboLayoutBinding, samplerLayoutBinding, lightLayoutBinding, cubemapLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.bindingCount = static_cast<u32>(bindings.size());
@@ -761,6 +767,7 @@ void Renderer::CreateGraphicsPipeline(){
 	vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
 }
 
+//SKybox Pipeline
 void Renderer::CreateSkyboxPipeline(){
 	auto vertexShaderCode = ReadFile("E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Shaders/SkyboxVert.spv");
 	auto fragmentShaderCode = ReadFile("E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Shaders/SkyboxFrag.spv");
@@ -827,7 +834,7 @@ void Renderer::CreateSkyboxPipeline(){
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;						//Set to Line for testing later (Enable GPU features)
 	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_NONE;
+	rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f;
@@ -1267,10 +1274,9 @@ void Renderer::CreateIndexBuffer(){
 	vkFreeMemory(logicalDevice, stagingBufferMemory, nullptr);
 }
 
-
 void Renderer::CreateUniformBuffers(){
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-	VkDeviceSize lightBufferSize = sizeof(LightObject);
+	VkDeviceSize lightBufferSize = sizeof(LightObject); 
 	
 	lightBuffer.resize(MAX_FRAMES_IN_FLIGHT);
 	lightBufferMemory.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1278,6 +1284,7 @@ void Renderer::CreateUniformBuffers(){
 	uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 	uniformBufferMemory.resize(MAX_FRAMES_IN_FLIGHT);
 	uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+	
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		CreateBuffer(bufferSize,
@@ -1294,6 +1301,7 @@ void Renderer::CreateUniformBuffers(){
 			lightBuffer[i],
 			lightBufferMemory[i]);
 
+
 		vkMapMemory(logicalDevice, uniformBufferMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
 		vkMapMemory(logicalDevice, lightBufferMemory[i], 0, lightBufferSize, 0, &lightBufferMapped[i]);
 	}
@@ -1309,7 +1317,8 @@ void Renderer::CreateDescriptorPool(){
 
 	std::array<VkDescriptorPoolSize, 2> poolSizes{};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 2;
+	poolSizes[0].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 3;
+
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	poolSizes[1].descriptorCount = static_cast<u32>(MAX_FRAMES_IN_FLIGHT) * 2;
 
@@ -1424,8 +1433,6 @@ void Renderer::CreateCommandBuffers(){
 	}else {
 		std::cout << "Command Buffer Created-> " << &commandBuffer << std::endl;
 	}
-
-	
 }
 
 void Renderer::CreateSyncObjects(){
@@ -1469,7 +1476,12 @@ void Renderer::DrawFrame(){
 
 	UpdateUniformBuffer(currentFrame);
 
+	//UI Implementation
+	ui.BeginFrame();
+	ImGui::Render();
+
 	RecordCommandBuffer(commandBuffer[currentFrame], imageIndex);
+
 
 	vkResetFences(logicalDevice, 1, &inFlightFence[currentFrame]);
 
@@ -1698,7 +1710,7 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(swapChainExtent.width);
+		viewport.width = static_cast<float>(swapChainExtent.width * 0.7f);
 		viewport.height = static_cast<float>(swapChainExtent.height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
@@ -1711,11 +1723,11 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 		scissor.extent = swapChainExtent;
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+
 		//Skybox Pipeline
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipeline);
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skyboxPipelineLayout,
 			0, 1, &descriptorSets[currentFrame], 0, nullptr);
-
 		VkBuffer skyboxVertexBuffers[] = { skyboxVertexBuffer };
 		VkDeviceSize Skyboxoffsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, skyboxVertexBuffers, Skyboxoffsets); 
@@ -1737,6 +1749,21 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(commandBuffer, static_cast<u32>(indices.size()), 1, 0, 0, 0);
 
+		VkViewport uiViewport{};
+		uiViewport.x = swapChainExtent.width * 0.7f;
+		uiViewport.y = 0.0f;
+		uiViewport.width = swapChainExtent.width * 0.3f;
+		uiViewport.height = swapChainExtent.height;
+		uiViewport.minDepth = 0.0f;
+		uiViewport.maxDepth = 1.0f;
+		vkCmdSetViewport(commandBuffer, 0, 1, &uiViewport);
+
+		VkRect2D uiScissor{};
+		uiScissor.offset = { static_cast<i32>(swapChainExtent.width * 0.7f), 0 };
+		uiScissor.extent = { static_cast<u32>(swapChainExtent.width * 0.3f), swapChainExtent.height };
+		vkCmdSetScissor(commandBuffer, 0, 1, &uiScissor);
+		
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
 	vkCmdEndRenderPass(commandBuffer);
 	result = vkEndCommandBuffer(commandBuffer);
@@ -1857,7 +1884,8 @@ void Renderer::UpdateUniformBuffer(u32 currentImage){
 	light.direction = glm::normalize(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 	light.color = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f);
 	light.intensity = 1.0f; 
-	light.ambient = 0.1f;
+	light.ambient = 0.5f;
+
 
 	memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 	memcpy(lightBufferMapped[currentImage], &light, sizeof(light));
@@ -2030,6 +2058,7 @@ VkSampleCountFlagBits Renderer::GetMaxUsableSampleCount(){
 
 }
 
+//------ Skybox Data ------
 void Renderer::CreateSkyboxResources(){
 	const std::vector<SkyboxVertex> skyboxVertices = {
 		// Front face
@@ -2107,7 +2136,23 @@ void Renderer::CreateSkyboxResources(){
 	CopyBuffer(stagingBuffer, skyboxVertexBuffer, bufferSize);
 	vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
 	vkFreeMemory(logicalDevice, stagingBufferMemory, nullptr);
+	
 }
+
+void Renderer::InitImgui() {
+	QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
+	VkSurfaceCapabilitiesKHR capabilities;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
+
+	u32 minImageCount = capabilities.minImageCount + 1;
+	u32 imageSize = swapChainImages.size();
+
+	ui.InitImGui(window, instance, physicalDevice, logicalDevice, indices.graphicsFamily.value(), graphicsQueue, minImageCount, imageSize, msaaSamples, renderPass);
+	std::cout << ("ImGui working 100%") << std::endl;
+}
+
+//------ End of Skybox Data ------
+
 
 void Renderer::CreateColorResources(){
 	VkFormat colorFormat = swapChainImageFormat;

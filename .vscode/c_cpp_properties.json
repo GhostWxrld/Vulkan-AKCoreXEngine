@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "E:/VulkanSDK/Include",
+                "D:/VULKAN DEV ENVIRONMENT/GLFW64/glfw-3.3.9.bin.WIN64/include",
+                "D:/VULKAN DEV ENVIRONMENT/glm-1.0.1/glm-1.0.1",
+                "C:/Users/aleja/Downloads/tinyobjloader-release/tinyobjloader-release"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.26100.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}

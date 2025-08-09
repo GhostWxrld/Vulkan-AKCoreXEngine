@@ -1,40 +1,42 @@
 #pragma once
 
+#define GLM_ENABLE_EXPERIMENTAL
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define NOMINMAX
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define GLM_ENABLE_EXPERIMENTAL
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 #include <GLFW/glfw3.h>
 #include <glm/gtx/hash.hpp>
 #include <tiny_obj_loader.h>
 
-#include <print>
 #include <glm/glm.hpp>
+
+#include <print>
 #include <stdexcept>
 #include <cstdlib>
 #include <cstdint>
-#include <vector>
 #include <optional>
 #include <set>
 #include <limits>
 #include <algorithm>
-#include <fstream>
-#include <array>
 #include <chrono> 
 #include <unordered_map>
 #include <sstream>
-#include <random>
+#include <fstream>
+#include <array>
 
 
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "../Source/stb_image.h"
 
-#include "Camera.h"
 #include "Cubemap.h"
+#include "UI.h"
+#include "Camera.h"
 
 typedef uint32_t u32;
 typedef int32_t i32;
@@ -118,6 +120,7 @@ struct SkyboxVertex {
 	}
 };
 
+
 namespace std {
 	template<>
 	struct hash<Vertex> {
@@ -129,18 +132,27 @@ namespace std {
 	};
 }
 
-//TODO: Make a model Importer class (Asset Manager)
-
+//  ____                _                           
+// |  _ \ ___ _ __   __| | ___ _ __                 
+// | |_) / _ \ '_ \ / _` |/ _ \ '__|                
+// |  _ <  __/ | | | (_| |  __/ |                   
+// |_|_\_\___|_| |_|\__,_|\___|_|                   
+// |  ___|   _ _ __   ___| |_(_) ___  _ __  ___ ___ 
+// | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __/ __|
+// |  _|| |_| | | | | (__| |_| | (_) | | | \__ \__ \
+// |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/___/
 class Renderer {
 public:
 	Camera mainCamera;
 	Cubemap skybox;
+	UI ui;
 
 	void Run();
 
 	bool framebufferResized = false;
 	int frameCount = 0;
 	double previousTime = glfwGetTime();
+
 private:
 	void InitWindow();
 	void InitVulkan();
@@ -214,6 +226,7 @@ private:
 	VkPipeline skyboxPipeline;
 	VkPipelineLayout skyboxPipelineLayout;
 
+
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
 	//Descriptor Sets
@@ -230,18 +243,21 @@ private:
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
 
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
+
+	//Skybox Buffers
 	VkBuffer skyboxVertexBuffer;
 	VkDeviceMemory skyboxVertexBufferMemory;
+
 
 	//Light Buffer and Light Buffer Memory
 	std::vector<VkBuffer> lightBuffer;
 	std::vector<VkDeviceMemory> lightBufferMemory;
 	std::vector<void*> lightBufferMapped;
+	
 
 	VkMemoryRequirements memRequirements;
-
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
 
 	//UniformBuffers
 	std::vector<VkBuffer> uniformBuffers;
@@ -270,19 +286,10 @@ private:
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
 
-	//Structs
-	struct QueueFamilyIndices {
-		std::optional<uint32_t>graphicsFamily;
-		std::optional<uint32_t>presentationFamily;
-
-		bool IsComplete() {
-			return graphicsFamily.has_value() && presentationFamily.has_value();
-		}
-	};
+	private:
 
 	std::vector<Vertex> vertices;
 	std::vector<u32>indices;
-
 
 	struct UniformBufferObject {
 		 glm::mat4 model;
@@ -298,6 +305,13 @@ private:
 	};
 	//END OF SHADER STUFF-----------------------
 
+	struct QueueFamilyIndices {
+		std::optional<u32> graphicsFamily;
+		std::optional<u32> presentationFamily;
+		bool IsComplete() {
+			return graphicsFamily.has_value() && presentationFamily.has_value();
+		}
+	};
 
 	struct SwapChainSupportDetails {
 		VkSurfaceCapabilitiesKHR capabilities;
@@ -358,6 +372,10 @@ private:
 
 	//Cubemap
 	void CreateSkyboxResources();
+	
+
+	//UI
+	void InitImgui();
 
 
 	// __     __    _ _     _       _   _             

@@ -7,7 +7,7 @@ A lightweight Vulkan rendering engine built from scratch for real-time graphics 
 - 🔧 Vulkan boilerplate: instance, physical/logical devices, swapchain, synchronization
 - 🎨 Texture loading with mipmapping support
 - 📦 OBJ model loading
-- 🔍 Basic minimap/mipmapping system
+- 🔍 Basic mipmapping system
 - 🖼️ MSAA (4x) for improved visual quality
 - 🎥 Camera system
 - 💡 Basic lighting system (Ambient and Diffuse)

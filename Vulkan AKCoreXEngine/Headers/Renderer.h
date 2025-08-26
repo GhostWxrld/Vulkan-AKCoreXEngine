@@ -1,136 +1,39 @@
 #pragma once
 
-#define GLM_ENABLE_EXPERIMENTAL
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define NOMINMAX
-#define GLM_ENABLE_EXPERIMENTAL
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-#include <GLFW/glfw3.h>
-#include <glm/gtx/hash.hpp>
+#include "Camera.h"
+#include "Cubemap.h"
+#include "UI.h"
+
 #include <tiny_obj_loader.h>
-
-#include <glm/glm.hpp>
 
 #include <print>
 #include <stdexcept>
 #include <cstdlib>
 #include <cstdint>
 #include <optional>
-#include <set>
 #include <limits>
+#include <set> 
 #include <algorithm>
 #include <chrono> 
 #include <unordered_map>
 #include <sstream>
 #include <fstream>
-#include <array>
-
 
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "../Source/stb_image.h"
 
-#include "Cubemap.h"
-#include "UI.h"
-#include "Camera.h"
 
 typedef uint32_t u32;
 typedef int32_t i32;
 //typedef uint16_t u16;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
-
-//Shader stuff ---------------TODO: Fix this shit from here, doesn't look good here
-struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-	glm::vec3 normal;
-
-
-	bool operator==(const Vertex& other) const {
-		return pos == other.pos && color == other.color && texCoord == other.texCoord;
-	}
-
-
-
-	//How the Vertex is going to be binded
-	static VkVertexInputBindingDescription GetBindingDescription() {
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	//Vertex Attributes
-	static std::array<VkVertexInputAttributeDescription, 4> GetAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
-
-		//#1
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-		//#2
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-		//#3
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-		attributeDescriptions[3].binding = 0;
-		attributeDescriptions[3].location = 3;
-		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[3].offset = offsetof(Vertex, normal);
-
-		return attributeDescriptions;
-	}
-};
-
-struct SkyboxVertex {
-	glm::vec3 pos;
-
-	static VkVertexInputBindingDescription GetBindingDescription() {
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(SkyboxVertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 1> GetAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(SkyboxVertex, pos);
-		return attributeDescriptions;
-	}
-};
-
-
-namespace std {
-	template<>
-	struct hash<Vertex> {
-		size_t operator()(Vertex const& vertex) const {
-			return ((hash<glm::vec3>()(vertex.pos) ^
-				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.texCoord) << 1);
-		}
-	};
-}
 
 //  ____                _                           
 // |  _ \ ___ _ __   __| | ___ _ __                 
@@ -143,9 +46,11 @@ namespace std {
 // |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/___/
 class Renderer {
 public:
+
 	Camera mainCamera;
 	Cubemap skybox;
 	UI ui;
+	UI::LightObject light;
 
 	void Run();
 
@@ -196,6 +101,8 @@ private:
 	const u32 HEIGHT = 1440;
 
 	std::string MODEL_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Models/viking_room.obj";
+	std::string GROUND_MODEL = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Models/ground.obj";
+
 	const std::string TEXTURE_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Textures/viking_room.png";
 	const std::vector<std::string> cubemapPaths = {
 		"E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Cubemap/Space/px.png",
@@ -268,6 +175,7 @@ private:
 	std::vector<VkSemaphore> imageAvailableSemaphore;
 	std::vector<VkSemaphore> renderFinishedSemaphore;
 	std::vector<VkFence> inFlightFence;
+	std::vector<VkFence> imagesInFlight;
 
 	u32 currentFrame = 0;
 
@@ -297,12 +205,6 @@ private:
 		 glm::mat4 proj;
 	};
 
-	struct LightObject {
-		alignas(16) glm::vec4 direction;
-		alignas(16) glm::vec4 color;
-		alignas(4) float intensity;
-		alignas(4) float ambient;
-	};
 	//END OF SHADER STUFF-----------------------
 
 	struct QueueFamilyIndices {

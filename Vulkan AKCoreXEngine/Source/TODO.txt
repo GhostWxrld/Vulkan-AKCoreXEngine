@@ -1,23 +1,30 @@
 ------------TODO------------
 Date Started  -> 08.02.2025
-Last Modified -> 08.08.2025
+Last Modified -> 08.18.2025
 
-In This file, here is everythiung that needs to be done in the project.	
+In This file, here is everything that (needs to be/has been) done in the project.	
 
 Vulkan Core:
-
-
+-> Implement a Vulkan Core that handles the creation of the Vulkan Instance, Device, Swapchain, and other necessary components.	[X]
 
 Mechanics:
--> Implement Assimp instead of ObjLoader to take in more file formats.						[]
--> Implement a system to handle different mesh formats and materials.						[]
+-> Safely link assimp to the project.																							[X]
+-> Implement Assimp instead of ObjLoader to take in more file formats.															[]
+-> Implement a system to handle different mesh formats and materials.															[]
 
 
 Rendering:
+-> Separate the Vertices from the renderer into it's own header file.   														[X]
+-> MipMapping Support.																											[X]
+-> Ambient/Diffuse lighting system.																								[X]
+-> Multi Sampling Anti-Aliasing (MSAA) Support.																					[X]
+-> Camera system that handles camera movement and input.																		[X]
+-> Cubemap Implementation.																										[X]
+-> Implement shadow maps																										[]
 
 
 UI:
--> Implement ImGui																			[X]
--> Implement a UI system that handles dragging and dropping of files.						[]
--> Fix the ImGui Rendering Functions in the Renderer.cpp file								[X]	
--> Implement Checkboxes and other UI elements 												[]	
+-> Succesfully link ImGui																										[X]
+-> Implement a UI system that handles dragging and dropping of files.															[]
+-> Fix the ImGui Rendering Functions in the Renderer.cpp file																	[X]	
+-> Implement Checkboxes and other UI elements 																					[X]	

@@ -4,6 +4,8 @@
 #include <string> 
 #include <vector>
 
+#include "Vertices.h"
+
 typedef uint32_t u32;
 
 class Cubemap{
@@ -27,6 +29,5 @@ private:
 	VkMemoryRequirements cubemapMemRequirements;
 	VkPhysicalDevice physicalDevice;
 	VkDevice logicalDevice;
-
 };
 

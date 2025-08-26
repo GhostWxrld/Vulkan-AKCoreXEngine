@@ -4,12 +4,12 @@
 //We replicate the BegingSingleTimeCommands and EndSingleTimeCommandns from Renderer.h
 //This is to keep all UI stuff in the UI class
 
-void UI::BeginFrame(){
+void UI::BeginFrame(LightObject& light){
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	UISettings();
+	UISettings(light);
 }
 
 
@@ -46,7 +46,7 @@ void UI::CreateUIDescriptorPool(VkDevice logicalDevice) {
 void UI::InitImGui(GLFWwindow* window, VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice logicalDevice, u32 queueFamily, VkQueue queue, u32 minImageCount, u32 imageSize, VkSampleCountFlagBits msaaSamples, VkRenderPass renderPass) {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
 	ImGui::StyleColorsDark();
@@ -68,9 +68,7 @@ void UI::InitImGui(GLFWwindow* window, VkInstance instance, VkPhysicalDevice phy
 	ImGui_ImplVulkan_Init(&initInfo);
 
 	VkCommandBuffer commandBuffer = BeginSingleTimeCommands(logicalDevice); 
-	ImGui_ImplVulkan_CreateFontsTexture();
 	EndSingleTimeCommands(queue);
-	ImGui_ImplVulkan_DestroyFontsTexture();
 }
 
 VkCommandBuffer UI::BeginSingleTimeCommands(VkDevice logicalDevice) {
@@ -130,7 +128,9 @@ void UI::Cleanup(VkDevice logicalDevice) {
 	vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffers);
 }
 
-void UI::UISettings() {
+
+
+void UI::UISettings(LightObject& Rlight) {
 	// Set Blender-like style
 	ImGui::StyleColorsDark(); // Start with dark theme as base
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -150,14 +150,14 @@ void UI::UISettings() {
 
 	// ===== BLENDER COLOR PALETTE =====
 	// Backgrounds
-	colors[ImGuiCol_WindowBg] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f); // Dark gray main background
-	colors[ImGuiCol_ChildBg] = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);  // Slightly darker child bg
-	colors[ImGuiCol_PopupBg] = ImVec4(0.15f, 0.15f, 0.15f, 0.98f);  // Popup background
+	colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.00f); // Dark gray main background
+	colors[ImGuiCol_ChildBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);  // Slightly darker child bg
+	colors[ImGuiCol_PopupBg] = ImVec4(0.09f, 0.09f, 0.09f, 0.98f);  // Popup background
 
 	// Interactive elements
-	colors[ImGuiCol_FrameBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f); // Input fields, checkboxes
-	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
-	colors[ImGuiCol_FrameBgActive] = ImVec4(0.27f, 0.27f, 0.27f, 1.00f);
+	colors[ImGuiCol_FrameBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f); // Input fields, checkboxes
+	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+	colors[ImGuiCol_FrameBgActive] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
 
 	// Blender's signature blue accents
 	const ImVec4 blender_blue(0.27f, 0.51f, 0.71f, 1.00f);
@@ -190,9 +190,9 @@ void UI::UISettings() {
 	colors[ImGuiCol_Separator] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
 	// ===== BLENDER-LIKE STYLING =====
-	style.WindowPadding = ImVec2(8, 8); // Tighter padding than default
-	style.FramePadding = ImVec2(6, 4);  // Compact controls
-	style.ItemSpacing = ImVec2(6, 6);   // Tight spacing
+	style.WindowPadding = ImVec2(10, 10); // Tighter padding than default
+	style.FramePadding = ImVec2(8, 8);  // Compact controls
+	style.ItemSpacing = ImVec2(10, 10);   // Tight spacing
 	style.ItemInnerSpacing = ImVec2(4, 4);
 
 	style.WindowRounding = 4.0f;
@@ -212,24 +212,42 @@ void UI::UISettings() {
 		ImGui::PopStyleColor();
 		ImGui::Separator();
 
+		//Lighting toggles
 		ImGui::Spacing();
-		static bool enableAmbientDiffuse = true;
+		static bool enableAmbientDiffuse = false;
+		ImGui::PushItemWidth(-1);
 		ImGui::Checkbox("Ambient/Diffuse Lighting", &enableAmbientDiffuse);
 
-		static bool enableSpecular = true;
-		ImGui::Checkbox("Specular Highlights", &enableSpecular);
+		static bool enableShadowMapping = false;
+		ImGui::Checkbox("Shadow Mapping", &enableShadowMapping);
 
-		static bool enableShadows = true;
-		ImGui::Checkbox("Shadow Casting", &enableShadows);
+		static bool enablePointLight = false;
+		ImGui::Checkbox("PointLight", &enablePointLight);
+
+		ImGui::Separator();
+		ImGui::Text("Light Settings");
+
+		float col[3] = { Rlight.color.r, Rlight.color.g, Rlight.color.b };
+		if (ImGui::ColorEdit3("Color", col)) {
+			Rlight.color = glm::vec4(col[0], col[1], col[2], 1.0f);
+		}
+
+		// Ambient slider
+		ImGui::Text("Ambient");
+		ImGui::BeginDisabled(!enableAmbientDiffuse);
+		ImGui::SliderFloat("Ambient", &Rlight.ambient, 0.0f, 1.0f);
+		ImGui::EndDisabled();
+
+		ImGui::PopItemWidth();
 	}
 	ImGui::End();
 
 	// Panel 2 (Tools)
 	ImGui::SetNextWindowPos(ImVec2(viewport->Size.x - panel_width, panel_height / 2));
 	ImGui::SetNextWindowSize(ImVec2(panel_width, panel_height / 2));
-	if (ImGui::Begin("Tools", nullptr, window_flags)) {
+	if (ImGui::Begin("PHSX", nullptr, window_flags)) {
 		ImGui::PushStyleColor(ImGuiCol_Text, blender_blue);
-		ImGui::Text("TOOLS");
+		ImGui::Text("PHYSICS");
 		ImGui::PopStyleColor();
 		ImGui::Spacing();
 		ImGui::Separator();

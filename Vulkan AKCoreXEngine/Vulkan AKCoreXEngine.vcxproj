@@ -77,7 +77,7 @@
     <IncludePath>$(ProjectDir)\ImGui\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)\ImGui\;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(ProjectDir)\ImGui\;$(IncludePath)</IncludePath>
@@ -88,15 +88,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;E:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;E:\VULKAN DEV ENVIRONMENT\assimp-master\include;E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\VulkanSDK\Lib;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>E:\VulkanSDK\Lib;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;"E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\lib\Debug\assimp-vc143-mtd.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -107,7 +107,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;E:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;E:\VULKAN DEV ENVIRONMENT\assimp-master\include;E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -116,8 +116,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\VulkanSDK\Lib;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>E:\VulkanSDK\Lib;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;"E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\lib\Debug\assimp-vc143-mtd.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -126,15 +126,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.4.321.1\Include;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;E:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;E:\tinyobjloader-release\tinyobjloader-release;$(ProjectDir)Source\ImGui\Backends;C:\Users\aleja\Downloads\imgui-master\imgui-master\backends;E:\VULKAN DEV ENVIRONMENT\assimp-master\include;E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\VulkanSDK\Lib;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.4.321.1\Lib;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;"E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\lib\Debug\assimp-vc143-mtd.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -145,7 +145,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;D:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\VulkanSDK\Include;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\include;E:\VULKAN DEV ENVIRONMENT\glm-1.0.1\glm-1.0.1;C:\Users\aleja\Downloads\tinyobjloader-release\tinyobjloader-release;C:\Users\aleja\Downloads\imgui-master\imgui-master;E:\VULKAN DEV ENVIRONMENT\assimp-master\include;E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -154,28 +154,41 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\VulkanSDK\Lib;D:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>E:\VulkanSDK\Lib;E:\VULKAN DEV ENVIRONMENT\GLFW64\glfw-3.3.9.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;"E:\VULKAN DEV ENVIRONMENT\assimp-master\Build\lib\Debug\assimp-vc143-mtd.lib";%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ImGui\imgui.cpp" />
-    <ClCompile Include="ImGui\imgui_draw.cpp" />
-    <ClCompile Include="ImGui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="ImGui\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="ImGui\imgui_tables.cpp" />
-    <ClCompile Include="ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="Source\AssetManager.cpp" />
+    <ClCompile Include="Source\ImGui\Backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Source\ImGui\Backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="Source\Cubemap.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\ImGui\imgui.cpp" />
+    <ClCompile Include="Source\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="Source\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="Source\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="Source\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\UI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Headers\AssetManager.h" />
     <ClInclude Include="Headers\Camera.h" />
     <ClInclude Include="Headers\Cubemap.h" />
+    <ClInclude Include="Headers\ImGui\Backend\imgui_impl_glfw.h" />
+    <ClInclude Include="Headers\ImGui\Backend\imgui_impl_vulkan.h" />
+    <ClInclude Include="Headers\ImGui\imconfig.h" />
+    <ClInclude Include="Headers\ImGui\imgui.h" />
+    <ClInclude Include="Headers\ImGui\imgui_internal.h" />
+    <ClInclude Include="Headers\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="Headers\ImGui\imstb_textedit.h" />
+    <ClInclude Include="Headers\ImGui\imstb_truetype.h" />
+    <ClInclude Include="Headers\Macros.h" />
     <ClInclude Include="Headers\Renderer.h" />
     <ClInclude Include="Headers\UI.h" />
+    <ClInclude Include="Headers\Vertices.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Clouds.comp" />

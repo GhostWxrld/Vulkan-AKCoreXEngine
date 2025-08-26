@@ -3,6 +3,8 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+
+
 glm::mat4 Camera::GetViewMatrix()
 {
 	//Calculate forward direction from angles

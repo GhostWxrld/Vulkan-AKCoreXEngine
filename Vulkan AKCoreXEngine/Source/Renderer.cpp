@@ -61,6 +61,7 @@ void Renderer::InitWindow(){
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	window = glfwCreateWindow(WIDTH, HEIGHT, "AKCoreXEngine", nullptr, nullptr);
 	glfwSetWindowUserPointer(window, this);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
 	//IMAGE ICON FOR WINDOW AND GAME ICON
@@ -127,6 +128,9 @@ void Renderer::InitVulkan() {
 	CreateCommandBuffers();
 	CreateSyncObjects();
 
+	imagesInFlight.resize(swapChainImages.size(), VK_NULL_HANDLE);
+	std::print("Recreating swapchain. imagesInFlight resized to: {} \n", imagesInFlight.size());
+
 	//UI
 	InitImgui();
 
@@ -136,6 +140,8 @@ void Renderer::MainLoop(){
 	double lastTime = glfwGetTime();
 	double lastX = 0, lastY = 0;
 	glfwGetCursorPos(window, &lastX, &lastY);
+
+	
 
 	while (!glfwWindowShouldClose(window)) {
 		double currentTime = glfwGetTime();
@@ -236,7 +242,7 @@ void Renderer::CreateInstance() {
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "AKCoreXEngine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_1;
+	appInfo.apiVersion = VK_API_VERSION_1_4;
 
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -1276,7 +1282,7 @@ void Renderer::CreateIndexBuffer(){
 
 void Renderer::CreateUniformBuffers(){
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-	VkDeviceSize lightBufferSize = sizeof(LightObject); 
+	VkDeviceSize lightBufferSize = sizeof(UI::LightObject); 
 	
 	lightBuffer.resize(MAX_FRAMES_IN_FLIGHT);
 	lightBufferMemory.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1370,7 +1376,7 @@ void Renderer::CreateDescriptorSets(){
 		VkDescriptorBufferInfo lightBufferInfo{};
 		lightBufferInfo.buffer = lightBuffer[i];
 		lightBufferInfo.offset = 0;
-		lightBufferInfo.range = sizeof(LightObject);
+		lightBufferInfo.range = sizeof(UI::LightObject);
 
 		VkDescriptorImageInfo skyboxImageInfo{};
 		skyboxImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1419,7 +1425,7 @@ void Renderer::CreateDescriptorSets(){
 
 void Renderer::CreateCommandBuffers(){
 
-	commandBuffer.resize(MAX_FRAMES_IN_FLIGHT);
+	commandBuffer.resize(swapChainImages.size());
 
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1436,25 +1442,32 @@ void Renderer::CreateCommandBuffers(){
 }
 
 void Renderer::CreateSyncObjects(){
-	imageAvailableSemaphore.resize(MAX_FRAMES_IN_FLIGHT);
-	renderFinishedSemaphore.resize(MAX_FRAMES_IN_FLIGHT);
+	imageAvailableSemaphore.resize(swapChainImages.size());
+	renderFinishedSemaphore.resize(swapChainImages.size());
 	inFlightFence.resize(MAX_FRAMES_IN_FLIGHT);
+	imagesInFlight.resize(swapChainImages.size());
 
 	VkSemaphoreCreateInfo semaphoreInfo{};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		if (vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore[i]) != VK_SUCCESS ||
+			vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphore[i]) != VK_SUCCESS){
+			throw std::runtime_error("Failed to create semaphores!");
+		}
+		else {
+			std::cout << "Semaphores Created-> " << &imageAvailableSemaphore[i] << " x " << &renderFinishedSemaphore << std::endl;
+		}
+	}
 
 	VkFenceCreateInfo fenceInfo{};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 	for ( size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++){
-		if (vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore[i]) != VK_SUCCESS ||
-			vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphore[i]) != VK_SUCCESS ||
-			vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFence[i]) != VK_SUCCESS) {
-
-			throw std::runtime_error("Failed to create semaphores!");
+		if (vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFence[i]) != VK_SUCCESS){
+			throw std::runtime_error("Failed to create Fence!");
 		}
 		else {
-			std::cout << "Semaphores Created-> " << &imageAvailableSemaphore[i] << " x " << &renderFinishedSemaphore << std::endl;
 			std::cout << "Fence Created-> " << &inFlightFence[i] << std::endl;
 		}
 	}
@@ -1462,6 +1475,17 @@ void Renderer::CreateSyncObjects(){
 }
 
 void Renderer::DrawFrame(){
+
+	static bool printed = false;
+	//Debug for command buffer out of bounds
+
+	if (!printed) {
+		std::cout << "DEBUG: currentFrame = "	   << currentFrame		   << "\n" 
+				  << "commandBuffer.size() = "   << commandBuffer.size() << "\n"
+				  << "swapChainImages.size() = " << swapChainImages.size()
+				  << std::endl;
+		printed = true;
+	}
 
 	vkWaitForFences(logicalDevice, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -1474,17 +1498,29 @@ void Renderer::DrawFrame(){
 		throw std::runtime_error("Failed to acquire Swap Chain Image!");
 	}
 
+	if (imageIndex >= commandBuffer.size()) {
+		std::cerr << "ERROR: imageIndex " << imageIndex << " is out of range! commandBuffer.size() = "
+				  << commandBuffer.size() << std::endl;
+		return;
+	}
+
+	if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+		vkWaitForFences(logicalDevice, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+	}
+	imagesInFlight[imageIndex] = inFlightFence[currentFrame];
+
 	UpdateUniformBuffer(currentFrame);
 
 	//UI Implementation
-	ui.BeginFrame();
+	ui.BeginFrame(light);
 	ImGui::Render();
 
-	RecordCommandBuffer(commandBuffer[currentFrame], imageIndex);
+	RecordCommandBuffer(commandBuffer[imageIndex], imageIndex);
 
 
 	vkResetFences(logicalDevice, 1, &inFlightFence[currentFrame]);
 
+	//-----Submit Info-----
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -1494,9 +1530,9 @@ void Renderer::DrawFrame(){
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer[currentFrame];
+	submitInfo.pCommandBuffers = &commandBuffer[imageIndex];
 
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore[currentFrame]};
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore[imageIndex]};
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -1771,6 +1807,8 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex
 		throw std::runtime_error("Failed to record command buffer");
 	}
 }
+
+
 void Renderer::CleanupSwapchain(){
 
 	vkDestroyImageView(logicalDevice, colorImageView, nullptr);
@@ -1809,8 +1847,6 @@ void Renderer::RecreateSwapchain(){
 	CreateColorResources();
 	CreateDepthResources(); 
 	CreateFramebuffers();
-
-
 }
 u32 Renderer::FindMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties){
 
@@ -1879,12 +1915,6 @@ void Renderer::UpdateUniformBuffer(u32 currentImage){
 	ubo.view = mainCamera.GetViewMatrix();
 	ubo.proj = glm::perspective(glm::radians(45.f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
 	ubo.proj[1][1] *= -1;// Invert Y axis
-
-	LightObject light{};
-	light.direction = glm::normalize(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	light.color = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f);
-	light.intensity = 1.0f; 
-	light.ambient = 0.5f;
 
 
 	memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
@@ -2054,7 +2084,7 @@ VkSampleCountFlagBits Renderer::GetMaxUsableSampleCount(){
 	if (count & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
 	if (count & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
-	return VK_SAMPLE_COUNT_1_BIT;
+	return VK_SAMPLE_COUNT_4_BIT;
 
 }
 
@@ -2149,7 +2179,7 @@ void Renderer::InitImgui() {
 
 	ui.InitImGui(window, instance, physicalDevice, logicalDevice, indices.graphicsFamily.value(), graphicsQueue, minImageCount, imageSize, msaaSamples, renderPass);
 	std::cout << ("ImGui working 100%") << std::endl;
-}
+} 
 
 //------ End of Skybox Data ------
 

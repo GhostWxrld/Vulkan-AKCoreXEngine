@@ -1,9 +1,10 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+
+#include "Macros.h"
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+
 
 class Camera{
 public:
@@ -27,6 +28,6 @@ public:
 
 	void Update(float deltaTime);
 
-	bool mouseLock = false;
+	bool mouseLock = true;
 };
 

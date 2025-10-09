@@ -1,17 +1,16 @@
-#include "../Headers/UI.h"
+	#include "../Headers/UI.h"
 
 
 //We replicate the BegingSingleTimeCommands and EndSingleTimeCommandns from Renderer.h
 //This is to keep all UI stuff in the UI class
 
-void UI::BeginFrame(LightObject& light){
+void UI::BeginFrame(LightObject& light) {
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
 	UISettings(light);
 }
-
 
 void UI::CreateUIDescriptorPool(VkDevice logicalDevice) {
 
@@ -221,8 +220,8 @@ void UI::UISettings(LightObject& Rlight) {
 		static bool enableShadowMapping = false;
 		ImGui::Checkbox("Shadow Mapping", &enableShadowMapping);
 
-		static bool enablePointLight = false;
-		ImGui::Checkbox("PointLight", &enablePointLight);
+		static bool enableBloom = false;
+		ImGui::Checkbox("Bloom", &enableBloom);
 
 		ImGui::Separator();
 		ImGui::Text("Light Settings");

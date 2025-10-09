@@ -8,6 +8,8 @@
 
 #include <array>
 
+#include <vector>
+
 //Header file that will include all the vertices used for this project
 
 //Model Vertices:
@@ -65,6 +67,39 @@ struct Vertex {
 	}
 };
 
+struct TerrainStruct{
+	glm::vec3 pos;
+	glm::vec3 normal; 
+
+	static VkVertexInputBindingDescription GetBindingDescription() {
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(TerrainStruct);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		return bindingDescription;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(TerrainStruct, pos);
+			
+		// location 1: vec3 normal
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(TerrainStruct, normal);
+
+		return attributeDescriptions;
+	}
+
+};
+
+
+
+
 //Skybox Vertices
 struct SkyboxVertex {
 	glm::vec3 pos;
@@ -97,3 +132,33 @@ namespace std {
 		}
 	};
 }
+
+struct BlackholeVertex {
+	glm::vec3 pos;
+	glm::vec3 normal;
+
+	static VkVertexInputBindingDescription GetBindingDescription() {
+		VkVertexInputBindingDescription binding{};
+		binding.binding = 0;
+		binding.stride = sizeof(BlackholeVertex);
+		binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		return binding;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 2> attrs{};
+
+		attrs[0].binding = 0;
+		attrs[0].location = 0;
+		attrs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attrs[0].offset = offsetof(BlackholeVertex, pos);
+
+		attrs[1].binding = 0;
+		attrs[1].location = 1;
+		attrs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attrs[1].offset = offsetof(BlackholeVertex, normal);
+
+		return attrs;
+	}
+};
+

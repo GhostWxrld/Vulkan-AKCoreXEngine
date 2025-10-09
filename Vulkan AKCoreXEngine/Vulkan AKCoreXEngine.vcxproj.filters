@@ -30,9 +30,6 @@
     <ClCompile Include="Source\UI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\AssetManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\ImGui\Backends\imgui_impl_glfw.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -54,6 +51,9 @@
     <ClCompile Include="Source\ImGui\imgui_widgets.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\TerrainPlane.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\Renderer.h">
@@ -66,9 +66,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\Cubemap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Headers\AssetManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\Vertices.h">
@@ -101,6 +98,12 @@
     <ClInclude Include="Headers\ImGui\imstb_truetype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\Blackhole.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\TerrainPlane.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\VertexShader.vert" />
@@ -110,7 +113,10 @@
     </None>
     <None Include="Shaders\Skybox.vert" />
     <None Include="Shaders\Skybox.frag" />
-    <None Include="Shaders\Clouds.comp" />
+    <None Include="Shaders\Blackhole.vert" />
+    <None Include="Shaders\Blackhole.frag" />
+    <None Include="Shaders\TerrainVertex.vert" />
+    <None Include="Shaders\TerrainFragment.frag" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Source\TODO.txt" />

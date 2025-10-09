@@ -28,3 +28,8 @@ UI:
 -> Implement a UI system that handles dragging and dropping of files.															[]
 -> Fix the ImGui Rendering Functions in the Renderer.cpp file																	[X]	
 -> Implement Checkboxes and other UI elements 																					[X]	
+
+
+QOL:
+-> Separate buffer and device creations into their own hpp files so that other													[]
+   files can use them and can be easier to implement future changes.

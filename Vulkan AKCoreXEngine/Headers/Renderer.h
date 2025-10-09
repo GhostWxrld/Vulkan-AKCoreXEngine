@@ -8,6 +8,8 @@
 #include "Camera.h"
 #include "Cubemap.h"
 #include "UI.h"
+#include "Blackhole.h"
+#include "TerrainPlane.h"
 
 #include <tiny_obj_loader.h>
 
@@ -23,8 +25,8 @@
 #include <unordered_map>
 #include <sstream>
 #include <fstream>
-
-#include <glm/gtc/matrix_transform.hpp>
+#include <thread>
+#include <windows.h>
 
 #include "../Source/stb_image.h"
 
@@ -51,6 +53,8 @@ public:
 	Cubemap skybox;
 	UI ui;
 	UI::LightObject light;
+	Blackhole blackhole;
+	TerrainPlane terr;
 
 	void Run();
 
@@ -61,6 +65,7 @@ public:
 private:
 	void InitWindow();
 	void InitVulkan();
+	void InitBlackhole();
 	void MainLoop();
 	void Cleanup();
 	void CreateInstance();
@@ -75,6 +80,8 @@ private:
 	void CreateDescriptorLayout();
 	void CreateGraphicsPipeline();
 	void CreateSkyboxPipeline();
+	void CreateBlackholePipeline();
+	void CreateTerrainPipeline();
 	void CreateFramebuffers();
 	void CreateCommandPool();
 	void CreateColorResources();
@@ -95,13 +102,12 @@ private:
 
 	//Main Loop Functions
 	void DrawFrame();
-
+		
 	GLFWwindow* window;
 	const u32 WIDTH = 2560;
 	const u32 HEIGHT = 1440;
 
 	std::string MODEL_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Models/viking_room.obj";
-	std::string GROUND_MODEL = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Models/ground.obj";
 
 	const std::string TEXTURE_PATH = "E:/Vulkan Projects/Vulkan AKCoreXEngine/Vulkan AKCoreXEngine/Textures/viking_room.png";
 	const std::vector<std::string> cubemapPaths = {
@@ -157,6 +163,23 @@ private:
 	VkBuffer skyboxVertexBuffer;
 	VkDeviceMemory skyboxVertexBufferMemory;
 
+	//Terrain Setup
+	VkBuffer terrainVertexBuffer;
+	VkDeviceMemory terrainVertexBufferMemory;
+	VkBuffer terrainIndexBuffer;
+	VkDeviceMemory terrainIndexBufferMemory;
+	VkPipeline terrainPipeline; 
+	VkPipelineLayout terrainPipelineLayout;
+
+	//BlackholeRendering Setup
+	VkPipeline blackholePipeline;
+	VkPipelineLayout blackholePipelineLayout;
+	VkBuffer blackholeVertexBuffer;
+	VkDeviceMemory blackholeVertexBufferMemory;
+	VkBuffer blackholeIndexBuffer;
+	VkDeviceMemory blackholeIndexBufferMemory;
+	u32 blackholeIndexCount;
+	
 
 	//Light Buffer and Light Buffer Memory
 	std::vector<VkBuffer> lightBuffer;
@@ -254,12 +277,13 @@ private:
 	u32 FindMemoryType(u32 typeFilter, VkMemoryPropertyFlags properties);
 	void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-	void UpdateUniformBuffer(u32 currentImage);
+	void UpdateUniformBuffer(u32 currentImage, const UniformBufferObject& ubo);
 	void CopyBufferToImage(VkBuffer buffer, VkImage  image, u32 width, u32 height);
 	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat FindDepthFormat();
 	bool HasStencilComponent(VkFormat format);
 	void UpdateFPSCounter(GLFWwindow* window);			//FPS counter on top left
+	UniformBufferObject CreateUBOForObject(const glm::mat4& modelMatrix);
 
 	//MipMap Func
 	void GenerateMipmaps(VkImage image, VkFormat imageFormat, i32 texWidth, i32 texHeight, u32 mipLevels);
@@ -275,6 +299,13 @@ private:
 	//Cubemap
 	void CreateSkyboxResources();
 	
+	//Blackhole Resources
+	void CreateBlackholeResources();
+
+	//Terrain Plane
+	void CreateTerrainResources();
+	void CleanupTerrain();
+
 
 	//UI
 	void InitImgui();
@@ -356,6 +387,5 @@ private:
 	}
 
 	void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-
 };
 

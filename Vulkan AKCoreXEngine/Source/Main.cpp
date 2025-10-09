@@ -4,11 +4,14 @@
 
 #include "../Headers/Renderer.h"
 
+
 int main() {
 	Renderer app;
 
 	try {
-		app.Run();
+		std::thread GfxThread(&Renderer::Run, &app);
+
+		GfxThread.join();
 	}
 	catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;

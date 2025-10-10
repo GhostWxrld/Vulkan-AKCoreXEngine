@@ -9,8 +9,18 @@ A lightweight Vulkan rendering engine built from scratch for real-time graphics 
 - 📦 OBJ model loading
 - 🔍 Basic mipmapping system
 - 🖼️ MSAA (4x) for improved visual quality
-- 🎥 Camera system
-- 💡 Basic lighting system (Ambient and Diffuse)
+- 🎥 Camera system:
+    - Uses GLM for vector, matrix, and quaternion math.
+    - Processes keyboard and mouse input via GLFW.
+    - Generates smooth view and rotation matrices for 3D rendering.
+    - Supports toggleable mouse lock for debugging or free-look mode.
+      
+- 💡 Basic lighting system (Ambient and Diffuse):
+    - Uses normal transformation matrix (transpose(inverse(model))) for accurate world-space lighting.
+    - Supports ambient + diffuse light contributions with configurable intensity and color.
+    - Integrates texture sampling and vertex color blending for realistic surface shading.
+    - Designed for modular UBO layouts (separate buffers for transform and lighting data).
+      
 - 🧊 Added Cubemap
 - ⛰️ Terrain Rendering Using Perlin Noise:
   

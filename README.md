@@ -1,33 +1,33 @@
-# 🌋 Vulkan Engine
+#  Vulkan Engine
 
 A lightweight Vulkan rendering engine built from scratch for real-time graphics experimentation and learning. This engine serves as a foundation for building more advanced rendering features and systems.
 
-## ✨ Features
+##  Features
 
-- 🔧 Vulkan boilerplate: instance, physical/logical devices, swapchain, synchronization
-- 🎨 Texture loading with mipmapping support
-- 📦 OBJ model loading
-- 🔍 Basic mipmapping system
-- 🖼️ MSAA (4x) for improved visual quality
-- 🎥 Camera system:
+-  Vulkan boilerplate: instance, physical/logical devices, swapchain, synchronization
+-  Texture loading with mipmapping support
+-  OBJ model loading
+-  Basic mipmapping system
+-  MSAA (4x) for improved visual quality
+-  Camera system:
     - Uses GLM for vector, matrix, and quaternion math.
     - Processes keyboard and mouse input via GLFW.
     - Generates smooth view and rotation matrices for 3D rendering.
     - Supports toggleable mouse lock for debugging or free-look mode.
       
-- 💡 Basic lighting system (Ambient and Diffuse):
+-  Basic lighting system (Ambient and Diffuse):
     - Uses normal transformation matrix (transpose(inverse(model))) for accurate world-space lighting.
     - Supports ambient + diffuse light contributions with configurable intensity and color.
     - Integrates texture sampling and vertex color blending for realistic surface shading.
     - Designed for modular UBO layouts (separate buffers for transform and lighting data).
       
-- 🧊 Added Cubemap
-- ⛰️ Terrain Rendering Using Perlin Noise:
+-  Added Cubemap
+-  Terrain Rendering Using Perlin Noise:
   
     <img width="724" height="547" alt="image" src="https://github.com/user-attachments/assets/edb4ebad-3344-425a-9540-a5fcab473c8e" />
     <img width="724" height="501" alt="image" src="https://github.com/user-attachments/assets/faf67864-fc53-48f5-a90e-54ddd7a91651" />
 
-   🧩Vertex Shader Highlights
+   Vertex Shader Highlights
 
    -  Fractal Brownian Motion (fBm): Generates the base terrain elevation with multiple octaves of Perlin-like noise for smooth, natural variation.
     
@@ -40,7 +40,7 @@ A lightweight Vulkan rendering engine built from scratch for real-time graphics 
    -  Procedural Normal Calculation: Computes terrain normals numerically from nearby height samples to enhance lighting response without a normal map.
  
      
-  🎨Fragment Shader Highlights
+  Fragment Shader Highlights
    -  Biome-Based Coloring: Dynamically assigns colors based on terrain height and slope — including deep ocean, shallow water, beaches, grasslands, forests, rocky cliffs, and snowcaps.
      
    -  Height-Sensitive Blending: Uses smooth interpolation for realistic transitions between terrain materials.
@@ -52,14 +52,14 @@ A lightweight Vulkan rendering engine built from scratch for real-time graphics 
    -  Height-Influenced Ambient Lighting: Simulates atmospheric effects by adjusting ambient strength based on elevation.
 
 
-## 🛠️ Build Requirements
+##  Build Requirements
 
 - Vulkan SDK 1.3+
 - CMake 3.20+
 - C++17-compatible compiler (MSVC, GCC, or Clang)
 - GPU with Vulkan support
 
-## 🚀 Build Instructions
+##  Build Instructions
 
 ```bash
 git clone https://github.com/yourusername/vulkan-engine.git

@@ -41,7 +41,7 @@ A lightweight Vulkan rendering engine built from scratch for real-time graphics 
  
      
   Fragment Shader Highlights
-   -  Biome-Based Coloring: Dynamically assigns colors based on terrain height and slope — including deep ocean, shallow water, beaches, grasslands, forests, rocky cliffs, and snowcaps.
+   -  Biome-Based Coloring: Dynamically assigns colors based on terrain height and slope including: deep ocean, shallow water, beaches, grasslands, forests, rocky cliffs, and snowcaps.
      
    -  Height-Sensitive Blending: Uses smooth interpolation for realistic transitions between terrain materials.
      
